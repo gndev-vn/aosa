@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Aosa.Api/Aosa.Api.csproj" />
+  <Project Path="Aosa.Application/Aosa.Application.csproj" />
+  <Project Path="Aosa.Domain/Aosa.Domain.csproj" />
+  <Project Path="Aosa.Infrastructure/Aosa.Infrastructure.csproj" />
+  <Project Path="Aosa.Tests/Aosa.Tests.csproj" />
+</Solution>

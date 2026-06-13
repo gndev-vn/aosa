@@ -1,0 +1,6 @@
+@Aosa.Api_HostAddress = http://localhost:5001
+
+GET {{Aosa.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
