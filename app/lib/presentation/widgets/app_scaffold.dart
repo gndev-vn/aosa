@@ -22,36 +22,44 @@ class AppScaffold extends ConsumerWidget {
       AppScreen.editOtp => _buildEditScreen(ref, nav, repo),
     };
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.06),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          )),
-          child: FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 0.93, end: 1.0).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutBack,
-                ),
-              ),
-              child: child,
-            ),
-          ),
-        );
+    return PopScope(
+      canPop: nav.currentScreen == AppScreen.home,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          ref.read(navigationProvider.notifier).goToHome();
+        }
       },
-      child: KeyedSubtree(
-        key: ValueKey(nav.currentScreen),
-        child: screen,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.06),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.93, end: 1.0).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutBack,
+                  ),
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(nav.currentScreen),
+          child: screen,
+        ),
       ),
     );
   }

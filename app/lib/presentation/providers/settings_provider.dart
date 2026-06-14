@@ -7,28 +7,29 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/entities/app_settings.dart';
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
-  SettingsNotifier() : super(const AppSettings());
+  final FlutterSecureStorage _storage;
+
+  SettingsNotifier() : _storage = const FlutterSecureStorage(), super(const AppSettings());
 
   Future<void> load() async {
-    const storage = FlutterSecureStorage();
-    final json = await _readStorage(storage, _storageKey);
+    final json = await _readStorage(_storageKey);
     if (json != null) {
       state = AppSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
     }
   }
 
   Future<void> _persist() async {
-    const storage = FlutterSecureStorage();
     try {
-      await storage.write(key: _storageKey, value: jsonEncode(state.toJson()));
+      await _storage.write(key: _storageKey, value: jsonEncode(state.toJson()));
+      await _storage.write(key: _serverUrlKey, value: state.serverUrl);
     } on PlatformException {
       // keyring unavailable — settings won't persist across restarts
     }
   }
 
-  Future<String?> _readStorage(FlutterSecureStorage storage, String key) async {
+  Future<String?> _readStorage(String key) async {
     try {
-      return await storage.read(key: key);
+      return await _storage.read(key: key);
     } on PlatformException {
       return null;
     }
@@ -85,6 +86,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 
   static const _storageKey = 'app_settings';
+  static const _serverUrlKey = 'server_url';
 }
 
 final settingsProvider =

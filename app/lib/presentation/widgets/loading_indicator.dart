@@ -1,7 +1,7 @@
 import 'dart:math' show cos, sin, pi;
 
 import 'package:flutter/material.dart';
-import '../platform/app_platform.dart';
+import '../../core/platform/app_platform.dart';
 
 class AosaLoadingIndicator extends StatefulWidget {
   final double size;
@@ -160,8 +160,7 @@ class _RingPainter extends CustomPainter {
     final dotAngle = -pi / 2 + 2 * pi * progress;
     final dotX = center.dx + radius * cos(dotAngle);
     final dotY = center.dy + radius * sin(dotAngle);
-    final dotPaint = Paint()
-      ..color = color;
+    final dotPaint = Paint()..color = color;
     canvas.drawCircle(Offset(dotX, dotY), 4.5, dotPaint);
   }
 

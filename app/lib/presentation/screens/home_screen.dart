@@ -7,6 +7,10 @@ import '../../data/repositories/otp_repository_impl.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/otp_list_provider.dart';
+import '../providers/repo_provider.dart';
+import '../providers/settings_provider.dart';
+import '../../data/api/repo_api.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/add_otp_bottom_sheet.dart';
 import '../widgets/aosa_widgets.dart';
 import '../widgets/otp_card.dart';
@@ -25,6 +29,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   OtpListNotifier? _otpNotifier;
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
+  String? _activeRepoId;
+  bool _shownConnectionError = false;
 
   @override
   void initState() {
@@ -42,7 +48,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpNotifier = ref.read(otpListProvider.notifier);
       _otpNotifier!.startAutoRefresh();
+      _loadActiveRepoId();
     });
+  }
+
+  Future<void> _loadActiveRepoId() async {
+    final id = await ref.read(repoProvider.notifier).getActiveRepoId();
+    if (mounted) setState(() => _activeRepoId = id);
   }
 
   @override
@@ -74,6 +86,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final repo = ref.read(otpRepositoryProvider);
+    final settings = ref.watch(settingsProvider);
+    final authFlow = ref.watch(authProvider);
     final filtered = _searchQuery.isEmpty
         ? items
         : items
@@ -85,6 +99,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     .toLowerCase()
                     .contains(_searchQuery.toLowerCase()))
             .toList();
+
+    if (settings.syncEnabled && authFlow != AuthFlow.authenticated) {
+      if (!_shownConnectionError) {
+        _shownConnectionError = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Connection to server failed. '
+                    'Sync data will remain persistent.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        });
+      }
+    } else if (authFlow == AuthFlow.authenticated) {
+      _shownConnectionError = false;
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -161,23 +194,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildHeader(ThemeData theme, ColorScheme colorScheme) {
+    final settings = ref.watch(settingsProvider);
+    final reposAsync = ref.watch(repoProvider);
+
+    final activeName = _activeRepoId != null
+        ? reposAsync.when(
+            data: (repos) {
+              for (final r in repos) {
+                if (r.id == _activeRepoId) return r.name;
+              }
+              return null;
+            },
+            loading: () => null,
+            error: (_, __) => null,
+          )
+        : null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
       child: Row(
         children: [
           const SizedBox(width: 40),
           Expanded(
-            child: Center(
-              child: Text(
-                'AOSA',
-                style: GoogleFonts.poppins(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
+            child: settings.syncEnabled
+                ? GestureDetector(
+                    onTap: () => _showRepoPicker(context),
+                    child: Column(
+                      children: [
+                        Text(
+                          'AOSA',
+                          style: GoogleFonts.poppins(
+                            fontSize: 48,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (activeName != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.folder_outlined,
+                                  size: 14, color: colorScheme.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                activeName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                              Icon(Icons.expand_more,
+                                  size: 14, color: colorScheme.primary),
+                            ],
+                          ),
+                      ],
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      'AOSA',
+                      style: GoogleFonts.poppins(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
           ),
           aosaIconButton(
             icon: Icons.settings,
@@ -188,6 +273,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ],
       ),
     );
+  }
+
+  void _showRepoPicker(BuildContext context) {
+    final reposAsync = ref.read(repoProvider);
+    reposAsync.whenData((repos) async {
+      final selected = await showModalBottomSheet<String>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => _RepoPickerSheet(repos: repos, currentRepoId: _activeRepoId),
+      );
+      if (selected != null && selected != _activeRepoId) {
+        await ref.read(repoProvider.notifier).setActiveRepoId(selected);
+        if (mounted) setState(() => _activeRepoId = selected);
+      }
+    });
   }
 
   Widget _buildSearchBar(ThemeData theme, ColorScheme colorScheme) {
@@ -612,5 +714,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         );
       }
     }
+  }
+}
+
+class _RepoPickerSheet extends StatelessWidget {
+  final List<RepoInfo> repos;
+  final String? currentRepoId;
+
+  const _RepoPickerSheet({required this.repos, this.currentRepoId});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Select Repo',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface)),
+            const SizedBox(height: 12),
+            ...repos.map((repo) => ListTile(
+                  leading: Icon(
+                    repo.isDefault ? Icons.star : Icons.folder_outlined,
+                    color: cs.primary,
+                  ),
+                  title: Text(repo.name),
+                  subtitle: repo.shared ? Text('Shared', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)) : null,
+                  trailing: repo.id == currentRepoId
+                      ? Icon(Icons.check, size: 18, color: cs.primary)
+                      : Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
+                  onTap: () => Navigator.of(context).pop(repo.id),
+                )),
+            if (repos.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text('No repos found',
+                      style: TextStyle(color: cs.onSurfaceVariant)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -5,6 +5,10 @@ import 'package:local_auth/local_auth.dart';
 import '../../domain/entities/app_settings.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/sync_provider.dart';
+import '../providers/repo_provider.dart';
+import '../providers/auth_provider.dart';
+import '../../data/api/repo_api.dart';
 import '../widgets/accent_color_picker.dart';
 import '../widgets/aosa_widgets.dart';
 import '../widgets/pin_setup_dialog.dart';
@@ -17,6 +21,8 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final authFlow = ref.watch(authProvider);
+    final reposAsync = ref.watch(repoProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -34,7 +40,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildSecuritySection(context, theme, colorScheme, settings, ref),
             const SizedBox(height: 24),
-            _buildSyncSection(context, theme, colorScheme, settings, ref),
+            _buildCloudSyncSection(context, theme, colorScheme, settings, authFlow, reposAsync, ref),
             const SizedBox(height: 24),
             _buildAboutSection(context, theme, colorScheme, settings),
             const SizedBox(height: 32),
@@ -46,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSectionHeader(ColorScheme colorScheme, String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 8),
       child: Row(
         children: [
           Container(
@@ -98,7 +104,7 @@ class SettingsScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
         child: Row(
           children: [
             leading,
@@ -345,99 +351,209 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSyncSection(
+  Widget _buildCloudSyncSection(
     BuildContext context,
     ThemeData theme,
     ColorScheme colorScheme,
     AppSettings settings,
+    AuthFlow authFlow,
+    AsyncValue<List<RepoInfo>> reposAsync,
     WidgetRef ref,
   ) {
+    final syncState = ref.watch(syncProvider);
+    final isConnected = authFlow == AuthFlow.authenticated;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(colorScheme, 'Sync'),
+        _buildSectionHeader(colorScheme, 'Cloud sync'),
         AosaCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               _settingsRow(
                 context,
-                leading: _iconBox(colorScheme, Icons.sync_rounded),
-                title: 'Enable sync',
-                subtitle: 'Sync across devices',
+                leading: _iconBox(colorScheme, Icons.cloud_outlined),
+                title: 'Cloud sync',
+                subtitle: 'Store your data on your self-hosted server',
                 trailing: AosaSwitch(
                   value: settings.syncEnabled,
-                  onChanged: (v) =>
-                      ref.read(settingsProvider.notifier).toggleSync(v),
+                  onChanged: (v) async {
+                    if (v) {
+                      if (context.mounted) _showCloudConfigSheet(context, ref);
+                    } else {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Turn off cloud sync?'),
+                          content: const Text(
+                            'All cloud data will be removed until you reconnect to the server. '
+                            'Your existing local OTP accounts will remain.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Turn off'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && context.mounted) {
+                        ref.read(settingsProvider.notifier).toggleSync(false);
+                      }
+                    }
+                  },
                 ),
               ),
-              if (settings.syncEnabled) _thinDivider(context),
               if (settings.syncEnabled) ...[
+                _thinDivider(context),
                 _settingsRow(
                   context,
                   leading: _iconBox(colorScheme, Icons.dns_outlined,
                       color: colorScheme.secondaryContainer),
-                  title: 'Server URL',
-                  trailing: SizedBox(
-                    width: 140,
-                    child: Text(
-                      settings.serverUrl.isEmpty
+                  title: 'Server',
+                  subtitle: isConnected
+                      ? 'Connected'
+                      : (settings.serverUrl.isEmpty
                           ? 'Not configured'
-                          : settings.serverUrl,
-                      textAlign: TextAlign.right,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                          : settings.serverUrl),
+                  trailing: Icon(Icons.chevron_right,
+                      size: 18, color: colorScheme.onSurfaceVariant),
+                  onTap: () => _showCloudConfigSheet(context, ref),
                 ),
-                _thinDivider(context, indent: 60),
-                _settingsRow(
-                  context,
-                  leading: _iconBox(colorScheme, Icons.phone_android,
-                      color: colorScheme.secondaryContainer),
-                  title: 'Device name',
-                  trailing: SizedBox(
-                    width: 120,
-                    child: Text(
-                      settings.deviceName.isEmpty
-                          ? 'Not set'
-                          : settings.deviceName,
-                      textAlign: TextAlign.right,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: AosaButton(
-                    onPressed: null,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.sync_rounded,
-                            size: 18,
-                            color: colorScheme.onPrimary.withAlpha(160)),
-                        const SizedBox(width: 8),
-                        Text('Sync now'),
-                      ],
-                    ),
-                  ),
-                ),
+                if (isConnected) ...[
+                  _thinDivider(context, indent: 60),
+                  _buildReposSection(context, colorScheme, reposAsync, ref),
+                  _thinDivider(context),
+                  _buildSyncActions(context, colorScheme, syncState, ref),
+                ],
               ],
             ],
           ),
         ),
       ],
     );
+  }
+
+  void _showCloudConfigSheet(BuildContext context, WidgetRef ref) async {
+    final connected = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CloudConfigSheet(),
+    );
+
+    if (connected != true && context.mounted) {
+      ref.read(settingsProvider.notifier).toggleSync(false);
+    }
+  }
+
+  Widget _buildReposSection(
+    BuildContext context,
+    ColorScheme colorScheme,
+    AsyncValue<List<RepoInfo>> reposAsync,
+    WidgetRef ref,
+  ) {
+    return Column(
+      children: [
+        _settingsRow(
+          context,
+          leading: _iconBox(colorScheme, Icons.folder_outlined),
+          title: 'Repos',
+          subtitle: 'Manage your repositories',
+          trailing: Icon(Icons.chevron_right,
+              size: 18, color: colorScheme.onSurfaceVariant),
+          onTap: () => _showRepoManager(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSyncActions(
+    BuildContext context,
+    ColorScheme colorScheme,
+    SyncState syncState,
+    WidgetRef ref,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AosaButton(
+                  onPressed: syncState == SyncState.syncing
+                      ? null
+                      : () => _triggerSync(context, ref),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        syncState == SyncState.syncing
+                            ? Icons.hourglass_top
+                            : Icons.sync_rounded,
+                        size: 18,
+                        color: colorScheme.onPrimary.withAlpha(160),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        syncState == SyncState.syncing
+                            ? 'Syncing…'
+                            : 'Sync now',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (syncState == SyncState.success)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('Sync completed',
+                  style: TextStyle(fontSize: 13, color: colorScheme.primary)),
+            ),
+          if (syncState == SyncState.error)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('Sync failed',
+                  style: TextStyle(fontSize: 13, color: colorScheme.error)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showRepoManager(BuildContext context, WidgetRef ref) {
+    final reposAsync = ref.read(repoProvider);
+    reposAsync.whenData((repos) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => _RepoManagerSheet(repos: repos),
+      );
+    });
+  }
+
+  Future<void> _triggerSync(BuildContext context, WidgetRef ref) async {
+    final error = await ref.read(syncProvider.notifier).runSync(ref);
+    if (error != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildAboutSection(
@@ -589,6 +705,310 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => const AccentColorPicker(),
+    );
+  }
+}
+
+class _CloudConfigSheet extends ConsumerStatefulWidget {
+  const _CloudConfigSheet();
+
+  @override
+  ConsumerState<_CloudConfigSheet> createState() => _CloudConfigSheetState();
+}
+
+class _CloudConfigSheetState extends ConsumerState<_CloudConfigSheet> {
+  final _serverController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _tokenController = TextEditingController();
+  bool _useToken = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final serverUrl = ref.read(settingsProvider).serverUrl;
+    _serverController.text = serverUrl;
+  }
+
+  @override
+  void dispose() {
+    _serverController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _tokenController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isConnected = ref.watch(authProvider) == AuthFlow.authenticated;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text('Server', style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface,
+              )),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _serverController,
+                decoration: const InputDecoration(
+                  labelText: 'Server URL',
+                  hintText: 'https://aosa.example.com',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.dns_outlined),
+                ),
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Text('Use token', style: TextStyle(color: cs.onSurface)),
+                  const Spacer(),
+                  AosaSwitch(
+                    value: _useToken,
+                    onChanged: (v) => setState(() => _useToken = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (_useToken)
+                TextField(
+                  controller: _tokenController,
+                  decoration: const InputDecoration(
+                    labelText: 'Token',
+                    hintText: 'Paste your token here',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.vpn_key_outlined),
+                  ),
+                  textInputAction: TextInputAction.done,
+                )
+              else ...[
+                TextField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: AosaButton(
+                  onPressed: _onConnect,
+                  child: Text(isConnected ? 'Reconnect' : 'Connect'),
+                ),
+              ),
+              if (isConnected) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _onDisconnect,
+                    child: Text('Disconnect',
+                        style: TextStyle(color: cs.error)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onConnect() async {
+    final serverUrl = _serverController.text.trim();
+    if (serverUrl.isEmpty) {
+      _showError('Enter server URL');
+      return;
+    }
+
+    ref.read(settingsProvider.notifier).setServerUrl(serverUrl);
+
+    if (_useToken) {
+      final token = _tokenController.text.trim();
+      if (token.isEmpty) {
+        _showError('Enter token');
+        return;
+      }
+      final error = await ref.read(authProvider.notifier).connectWithToken(serverUrl, token);
+      if (error != null) {
+        _showError(error);
+      } else if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } else {
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text;
+      if (username.isEmpty || password.isEmpty) {
+        _showError('Enter username and password');
+        return;
+      }
+      final error = await ref.read(authProvider.notifier).login(serverUrl, username, password);
+      if (error != null) {
+        _showError(error);
+      } else if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    }
+  }
+
+  Future<void> _onDisconnect() async {
+    await ref.read(authProvider.notifier).logout();
+    if (mounted) Navigator.of(context).pop(false);
+  }
+
+  void _showError(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+      );
+    }
+  }
+}
+
+class _RepoManagerSheet extends ConsumerStatefulWidget {
+  final List<RepoInfo> repos;
+
+  const _RepoManagerSheet({required this.repos});
+
+  @override
+  ConsumerState<_RepoManagerSheet> createState() => _RepoManagerSheetState();
+}
+
+class _RepoManagerSheetState extends ConsumerState<_RepoManagerSheet> {
+  late List<RepoInfo> _repos;
+
+  @override
+  void initState() {
+    super.initState();
+    _repos = List.from(widget.repos);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Repos',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface)),
+            const SizedBox(height: 8),
+            ..._repos.map((repo) => ListTile(
+                  dense: true,
+                  leading: Icon(
+                    repo.isDefault ? Icons.star : Icons.folder_outlined,
+                    color: cs.primary,
+                  ),
+                  title: Text(repo.name),
+                  subtitle: repo.isDefault ? Text('Default', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)) : null,
+                  trailing: !repo.isDefault
+                      ? IconButton(
+                          icon: Icon(Icons.delete_outline,
+                              size: 18, color: cs.error),
+                          onPressed: () {
+                            // TODO: wire up server URL + token
+                          },
+                        )
+                      : null,
+                )),
+            const SizedBox(height: 8),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () => _showCreateDialog(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('New Repo'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Repo'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Repo name',
+            hintText: 'My Vault',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              // TODO: pass serverUrl + token
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
     );
   }
 }

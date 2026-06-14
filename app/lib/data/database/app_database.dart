@@ -200,6 +200,17 @@ class AppDatabase {
     _db.execute('DELETE FROM sync_queue');
   }
 
+  void clearQueuedForRecord(String recordId, int version) {
+    _db.execute(
+      'DELETE FROM sync_queue WHERE record_id = ? AND expected_version = ?',
+      [recordId, version],
+    );
+  }
+
+  void execute(String sql, List<Object?> params) {
+    _db.execute(sql, params);
+  }
+
   void dispose() {
     _db.dispose();
     _instance = null;
