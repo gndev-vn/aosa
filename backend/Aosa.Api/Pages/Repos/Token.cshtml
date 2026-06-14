@@ -1,0 +1,33 @@
+@page "/repos/{repoId:guid}/token"
+@model Aosa.Api.Pages.Repos.TokenModel
+@{
+    ViewData["Title"] = "API Token";
+    ViewData["IsAuthenticated"] = true;
+}
+
+<div class="card" style="max-width: 600px; margin: 40px auto;">
+    <div class="flex-between" style="margin-bottom: 20px;">
+        <h2 style="font-size: 22px; font-weight: 600;">API Token</h2>
+        <a href="/repos" class="btn btn-outline btn-sm">Back</a>
+    </div>
+
+    <p style="color: #6e6e73; font-size: 14px; margin-bottom: 16px;">
+        Use this token to authenticate the AOSA mobile app with the <strong>@Model.RepoName</strong> repo.
+        Copy it and paste it in the app's Cloud Sync settings.
+    </p>
+
+    @if (Model.Token is not null)
+    {
+        <div style="background: #f5f5f7; border-radius: 10px; padding: 16px; word-break: break-all; font-family: monospace; font-size: 13px; margin-bottom: 16px;">
+            @Model.Token
+        </div>
+
+        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(`@Model.Token`).then(() => this.textContent='Copied!').catch(() => {})">
+            Copy Token
+        </button>
+    }
+    else
+    {
+        <div class="alert alert-error">Unable to generate token.</div>
+    }
+</div>

@@ -1,0 +1,35 @@
+@page
+@model Aosa.Api.Pages.Auth.SignUpModel
+@{
+    ViewData["Title"] = "Sign Up";
+}
+
+<div class="card" style="max-width: 420px; margin: 40px auto;">
+    <h2>Create Account</h2>
+
+    @if (Model.Error is not null)
+    {
+        <div class="alert alert-error">@Model.Error</div>
+    }
+
+    <form method="post">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="Username" required autofocus />
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="Password" required />
+        </div>
+        <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" name="ConfirmPassword" required />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">Create Account</button>
+    </form>
+
+    <p style="margin-top: 16px; text-align: center; font-size: 14px; color: #6e6e73;">
+        Already have an account?
+        <a href="/auth/signin" style="color: #007aff; text-decoration: none; font-weight: 500;">Sign In</a>
+    </p>
+</div>

@@ -1,0 +1,21 @@
+services:
+  aosa-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Default=Data Source=/data/aosa.db
+      - Jwt__Key=${AOSA_JWT_KEY:-CHANGE_ME_TO_A_SECURE_KEY_AT_LEAST_32_CHARS_LONG}
+      - Jwt__Issuer=aosa-selfhosted
+      - Jwt__Audience=aosa-client
+      - Jwt__ExpireMinutes=60
+    volumes:
+      - aosa-data:/data
+    restart: unless-stopped
+
+volumes:
+  aosa-data:

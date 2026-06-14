@@ -1,0 +1,60 @@
+@page
+@model Aosa.Api.Pages.Repos.IndexModel
+@{
+    ViewData["Title"] = "Repos";
+    ViewData["IsAuthenticated"] = User.Identity?.IsAuthenticated == true;
+}
+
+<div class="flex-between" style="margin-bottom: 20px;">
+    <h2 style="font-size: 22px; font-weight: 600;">Your Repos</h2>
+    <a href="/repos/create" class="btn btn-primary btn-sm">+ New Repo</a>
+</div>
+
+@if (Model.Repos.Count == 0)
+{
+    <div class="card" style="text-align: center; padding: 48px;">
+        <p style="color: #8e8e93; font-size: 15px;">No repos yet. Create your first one!</p>
+    </div>
+}
+else
+{
+    <div class="card" style="padding: 0;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Members</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var repo in Model.Repos)
+                {
+                    <tr>
+                        <td>
+                            <span style="font-weight: 500;">@repo.Name</span>
+                            @if (repo.IsDefault)
+                            {
+                                <span class="badge badge-default">Default</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @(repo.Role == "owner" ? "badge-default" : "badge-member")">
+                                @repo.Role
+                            </span>
+                        </td>
+                        <td>@repo.MemberCount</td>
+                        <td style="text-align: right;">
+                            @if (repo.Role == "owner")
+                            {
+                                <a href="/repos/@repo.Id/share" class="btn btn-outline btn-sm">Share</a>
+                            }
+                            <a href="/repos/@repo.Id/token" class="btn btn-outline btn-sm" style="margin-left: 6px;">Token</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

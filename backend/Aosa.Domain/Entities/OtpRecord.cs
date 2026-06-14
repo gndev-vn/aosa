@@ -9,6 +9,6 @@ public class OtpRecord
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
 
-    // Device ownership
+    public Guid RepoId { get; set; }
     public Guid DeviceId { get; set; }
 }

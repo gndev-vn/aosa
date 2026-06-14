@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -10,48 +11,53 @@ public static class OtpEndpoints
     {
         var group = app.MapGroup("/api/v1/otp")
             .WithTags("OTP Records")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireRateLimiting("Api");
 
-        group.MapGet("/", async (AosaDbContext db) =>
+        group.MapGet("/", async (
+            [AsParameters] OtpQuery query,
+            AosaDbContext db,
+            ClaimsPrincipal user) =>
         {
             var records = await db.OtpRecords
-                .Where(r => r.DeletedAt == null)
+                .Where(r => r.RepoId == query.RepoId && r.DeletedAt == null)
                 .OrderByDescending(r => r.UpdatedAt)
                 .ToListAsync();
-
-            var serverVersion = await db.SyncMetadatas
-                .Select(m => m.GlobalVersion)
-                .FirstOrDefaultAsync();
 
             return Results.Ok(new
             {
                 items = records.Select(MapToDto),
-                server_version = serverVersion
             });
         });
 
         group.MapPost("/", async (
             CreateOtpRequest request,
-            AosaDbContext db) =>
+            AosaDbContext db,
+            ClaimsPrincipal user) =>
         {
+            var repoAccess = await HasRepoAccess(db, request.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
+
             var record = new OtpRecord
             {
                 Id = request.Id,
                 EncryptedBlob = request.EncryptedBlob,
                 Version = 1,
+                RepoId = request.RepoId,
+                DeviceId = GetDeviceId(user),
                 CreatedAt = request.ClientTimestamp,
                 UpdatedAt = request.ClientTimestamp,
-                DeviceId = Guid.Empty // Will come from JWT
             };
 
             db.OtpRecords.Add(record);
-            await IncrementGlobalVersion(db);
+            await IncrementRepoVersion(db, request.RepoId);
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/v1/otp/{record.Id}", new
             {
                 id = record.Id,
                 version = record.Version,
+                repo_id = record.RepoId,
                 created_at = record.CreatedAt
             });
         });
@@ -59,11 +65,15 @@ public static class OtpEndpoints
         group.MapPut("/{id:guid}", async (
             Guid id,
             UpdateOtpRequest request,
-            AosaDbContext db) =>
+            AosaDbContext db,
+            ClaimsPrincipal user) =>
         {
             var record = await db.OtpRecords.FindAsync(id);
             if (record is null)
                 return Results.NotFound(new { error = "not_found" });
+
+            var repoAccess = await HasRepoAccess(db, record.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
 
             if (request.ExpectedVersion != record.Version)
             {
@@ -79,7 +89,7 @@ public static class OtpEndpoints
             record.Version++;
             record.UpdatedAt = request.ClientTimestamp;
 
-            await IncrementGlobalVersion(db);
+            await IncrementRepoVersion(db, record.RepoId);
             await db.SaveChangesAsync();
 
             return Results.Ok(new
@@ -93,11 +103,15 @@ public static class OtpEndpoints
         group.MapDelete("/{id:guid}", async (
             Guid id,
             DeleteOtpRequest request,
-            AosaDbContext db) =>
+            AosaDbContext db,
+            ClaimsPrincipal user) =>
         {
             var record = await db.OtpRecords.FindAsync(id);
             if (record is null)
                 return Results.NotFound(new { error = "not_found" });
+
+            var repoAccess = await HasRepoAccess(db, record.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
 
             if (request.ExpectedVersion != record.Version)
             {
@@ -111,7 +125,7 @@ public static class OtpEndpoints
             record.DeletedAt = DateTime.UtcNow;
             record.Version++;
 
-            await IncrementGlobalVersion(db);
+            await IncrementRepoVersion(db, record.RepoId);
             await db.SaveChangesAsync();
 
             return Results.Ok(new
@@ -123,34 +137,49 @@ public static class OtpEndpoints
         });
     }
 
-    private static async Task IncrementGlobalVersion(AosaDbContext db)
+    private static async Task<bool> HasRepoAccess(AosaDbContext db, Guid repoId, ClaimsPrincipal user)
     {
-        var meta = await db.SyncMetadatas.FirstOrDefaultAsync();
+        var userId = GetUserId(user);
+        if (userId == Guid.Empty) return false;
+
+        var repo = await db.Repos.FindAsync(repoId);
+        if (repo is null) return false;
+        if (repo.OwnerId == userId) return true;
+
+        return await db.RepoMemberships.AnyAsync(m =>
+            m.RepoId == repoId && m.UserId == userId);
+    }
+
+    private static async Task IncrementRepoVersion(AosaDbContext db, Guid repoId)
+    {
+        var meta = await db.SyncMetadatas.FirstOrDefaultAsync(m => m.DeviceId == repoId);
         if (meta is not null)
             meta.GlobalVersion++;
     }
+
+    private static Guid GetUserId(ClaimsPrincipal user)
+    {
+        var sub = user.FindFirstValue(ClaimTypes.NameIdentifier)
+                  ?? user.FindFirstValue("sub");
+        if (sub is null) return Guid.Empty;
+        return Guid.TryParse(sub, out var id) ? id : Guid.Empty;
+    }
+
+    private static Guid GetDeviceId(ClaimsPrincipal user) => Guid.Empty;
 
     private static object MapToDto(OtpRecord r) => new
     {
         id = r.Id,
         encrypted_blob = r.EncryptedBlob,
         version = r.Version,
+        repo_id = r.RepoId,
         created_at = r.CreatedAt,
         updated_at = r.UpdatedAt,
         deleted_at = r.DeletedAt
     };
 }
 
-public record CreateOtpRequest(
-    Guid Id,
-    string EncryptedBlob,
-    DateTime ClientTimestamp
-);
-
-public record UpdateOtpRequest(
-    string EncryptedBlob,
-    int ExpectedVersion,
-    DateTime ClientTimestamp
-);
-
+public record OtpQuery(Guid RepoId);
+public record CreateOtpRequest(Guid Id, Guid RepoId, string EncryptedBlob, DateTime ClientTimestamp);
+public record UpdateOtpRequest(string EncryptedBlob, int ExpectedVersion, DateTime ClientTimestamp);
 public record DeleteOtpRequest(int ExpectedVersion);

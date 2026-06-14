@@ -1,0 +1,68 @@
+@page "/repos/{repoId:guid}/share"
+@model Aosa.Api.Pages.Repos.ShareModel
+@{
+    ViewData["Title"] = "Share Repo";
+    ViewData["IsAuthenticated"] = true;
+}
+
+<div class="flex-between" style="margin-bottom: 20px;">
+    <h2 style="font-size: 22px; font-weight: 600;">Share: @Model.RepoName</h2>
+    <a href="/repos" class="btn btn-outline btn-sm">Back</a>
+</div>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-error">@Model.Error</div>
+}
+@if (Model.Success is not null)
+{
+    <div class="alert alert-success">@Model.Success</div>
+}
+
+<div class="card">
+    <h2>Add Member</h2>
+    <form method="post" style="display: flex; gap: 8px; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label for="email">User email (username)</label>
+            <input type="text" id="email" name="Email" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Share</button>
+    </form>
+</div>
+
+<div class="card" style="padding: 0;">
+    @if (Model.Members.Count == 0)
+    {
+        <div style="padding: 32px; text-align: center; color: #8e8e93;">No members yet.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var member in Model.Members)
+                {
+                    <tr>
+                        <td>@member.Username</td>
+                        <td><span class="badge badge-member">@member.Role</span></td>
+                        <td style="text-align: right;">
+                            @if (member.Role != "owner")
+                            {
+                                <form method="post" action="/repos/@Model.RepoId/revoke" style="display:inline">
+                                    <input type="hidden" name="userId" value="@member.UserId" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Revoke</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

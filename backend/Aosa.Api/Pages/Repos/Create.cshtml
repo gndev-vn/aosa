@@ -1,0 +1,26 @@
+@page
+@model Aosa.Api.Pages.Repos.CreateModel
+@{
+    ViewData["Title"] = "New Repo";
+    ViewData["IsAuthenticated"] = true;
+}
+
+<div class="card" style="max-width: 480px; margin: 40px auto;">
+    <h2>Create Repo</h2>
+
+    @if (Model.Error is not null)
+    {
+        <div class="alert alert-error">@Model.Error</div>
+    }
+
+    <form method="post">
+        <div class="form-group">
+            <label for="name">Repo Name</label>
+            <input type="text" id="name" name="Name" value="@Model.Name" required autofocus />
+        </div>
+        <div class="flex" style="gap: 8px;">
+            <a href="/repos" class="btn btn-outline">Cancel</a>
+            <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+    </form>
+</div>
