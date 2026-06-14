@@ -24,10 +24,12 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           children: [
             AosaHeader(
-              leading: aosaBackButton(context, onPressed: () => ref.read(navigationProvider.notifier).goToHome()),
+              leading: aosaBackButton(context,
+                  onPressed: () =>
+                      ref.read(navigationProvider.notifier).goToHome()),
               title: 'Settings',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
             _buildAppearanceSection(context, theme, colorScheme, settings, ref),
             const SizedBox(height: 24),
             _buildSecuritySection(context, theme, colorScheme, settings, ref),
@@ -44,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSectionHeader(ColorScheme colorScheme, String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      padding: const EdgeInsets.only(left: 4),
       child: Row(
         children: [
           Container(
@@ -57,9 +59,9 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            title,
+            title.toUpperCase(),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
               color: colorScheme.primary,
@@ -78,7 +80,9 @@ class SettingsScreen extends ConsumerWidget {
         color: color ?? cs.primaryContainer,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, size: 18, color: color != null ? cs.onPrimary : cs.onPrimaryContainer),
+      child: Icon(icon,
+          size: 18,
+          color: color != null ? cs.onPrimary : cs.onPrimaryContainer),
     );
   }
 
@@ -94,7 +98,7 @@ class SettingsScreen extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
         child: Row(
           children: [
             leading,
@@ -198,7 +202,8 @@ class SettingsScreen extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _settingsRow(context,
+              _settingsRow(
+                context,
                 leading: _iconBox(colorScheme, Icons.palette_outlined),
                 title: 'Theme',
                 trailing: _selector(
@@ -210,15 +215,26 @@ class SettingsScreen extends ConsumerWidget {
                     ('System', 'system'),
                   ],
                   onChanged: (v) {
-                    if (v == 'light') ref.read(settingsProvider.notifier).setThemeMode(AppThemeMode.light);
-                    if (v == 'dark') ref.read(settingsProvider.notifier).setThemeMode(AppThemeMode.dark);
-                    if (v == 'system') ref.read(settingsProvider.notifier).setThemeMode(AppThemeMode.system);
+                    if (v == 'light')
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setThemeMode(AppThemeMode.light);
+                    if (v == 'dark')
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setThemeMode(AppThemeMode.dark);
+                    if (v == 'system')
+                      ref
+                          .read(settingsProvider.notifier)
+                          .setThemeMode(AppThemeMode.system);
                   },
                 ),
               ),
-              if (settings.themeMode != AppThemeMode.dark) _thinDivider(context),
               if (settings.themeMode != AppThemeMode.dark)
-                _settingsRow(context,
+                _thinDivider(context),
+              if (settings.themeMode != AppThemeMode.dark)
+                _settingsRow(
+                  context,
                   leading: _iconBox(colorScheme, Icons.colorize_outlined),
                   title: 'Accent color',
                   trailing: Row(
@@ -237,7 +253,8 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.chevron_right, size: 18, color: colorScheme.onSurfaceVariant),
+                      Icon(Icons.chevron_right,
+                          size: 18, color: colorScheme.onSurfaceVariant),
                     ],
                   ),
                   onTap: () => _pickAccentColor(context, ref),
@@ -264,7 +281,8 @@ class SettingsScreen extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _settingsRow(context,
+              _settingsRow(
+                context,
                 leading: _iconBox(colorScheme, Icons.lock_outline_rounded),
                 title: 'PIN Lock',
                 subtitle: 'Require PIN to open the app',
@@ -275,7 +293,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               if (settings.pinEnabled) _thinDivider(context),
               if (settings.pinEnabled)
-                _settingsRow(context,
+                _settingsRow(
+                  context,
                   leading: _iconBox(colorScheme, Icons.fingerprint),
                   title: 'Biometric',
                   subtitle: 'Use fingerprint or face unlock',
@@ -286,7 +305,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               if (settings.pinEnabled) _thinDivider(context),
               if (settings.pinEnabled)
-                _settingsRow(context,
+                _settingsRow(
+                  context,
                   leading: _iconBox(colorScheme, Icons.timer_outlined),
                   title: 'Auto-lock timeout',
                   trailing: _selector(
@@ -299,10 +319,22 @@ class SettingsScreen extends ConsumerWidget {
                       ('5 minutes', 'minutes5'),
                     ],
                     onChanged: (v) {
-                      if (v == 'immediate') ref.read(settingsProvider.notifier).setAutoLockTimeout(AutoLockTimeout.immediate);
-                      if (v == 'seconds30') ref.read(settingsProvider.notifier).setAutoLockTimeout(AutoLockTimeout.seconds30);
-                      if (v == 'minute1') ref.read(settingsProvider.notifier).setAutoLockTimeout(AutoLockTimeout.minute1);
-                      if (v == 'minutes5') ref.read(settingsProvider.notifier).setAutoLockTimeout(AutoLockTimeout.minutes5);
+                      if (v == 'immediate')
+                        ref
+                            .read(settingsProvider.notifier)
+                            .setAutoLockTimeout(AutoLockTimeout.immediate);
+                      if (v == 'seconds30')
+                        ref
+                            .read(settingsProvider.notifier)
+                            .setAutoLockTimeout(AutoLockTimeout.seconds30);
+                      if (v == 'minute1')
+                        ref
+                            .read(settingsProvider.notifier)
+                            .setAutoLockTimeout(AutoLockTimeout.minute1);
+                      if (v == 'minutes5')
+                        ref
+                            .read(settingsProvider.notifier)
+                            .setAutoLockTimeout(AutoLockTimeout.minutes5);
                     },
                   ),
                 ),
@@ -328,24 +360,30 @@ class SettingsScreen extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _settingsRow(context,
+              _settingsRow(
+                context,
                 leading: _iconBox(colorScheme, Icons.sync_rounded),
                 title: 'Enable sync',
                 subtitle: 'Sync across devices',
                 trailing: AosaSwitch(
                   value: settings.syncEnabled,
-                  onChanged: (v) => ref.read(settingsProvider.notifier).toggleSync(v),
+                  onChanged: (v) =>
+                      ref.read(settingsProvider.notifier).toggleSync(v),
                 ),
               ),
               if (settings.syncEnabled) _thinDivider(context),
               if (settings.syncEnabled) ...[
-                _settingsRow(context,
-                  leading: _iconBox(colorScheme, Icons.dns_outlined, color: colorScheme.secondaryContainer),
+                _settingsRow(
+                  context,
+                  leading: _iconBox(colorScheme, Icons.dns_outlined,
+                      color: colorScheme.secondaryContainer),
                   title: 'Server URL',
                   trailing: SizedBox(
                     width: 140,
                     child: Text(
-                      settings.serverUrl.isEmpty ? 'Not configured' : settings.serverUrl,
+                      settings.serverUrl.isEmpty
+                          ? 'Not configured'
+                          : settings.serverUrl,
                       textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -357,13 +395,17 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 _thinDivider(context, indent: 60),
-                _settingsRow(context,
-                  leading: _iconBox(colorScheme, Icons.phone_android, color: colorScheme.secondaryContainer),
+                _settingsRow(
+                  context,
+                  leading: _iconBox(colorScheme, Icons.phone_android,
+                      color: colorScheme.secondaryContainer),
                   title: 'Device name',
                   trailing: SizedBox(
                     width: 120,
                     child: Text(
-                      settings.deviceName.isEmpty ? 'Not set' : settings.deviceName,
+                      settings.deviceName.isEmpty
+                          ? 'Not set'
+                          : settings.deviceName,
                       textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -381,7 +423,9 @@ class SettingsScreen extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.sync_rounded, size: 18, color: colorScheme.onPrimary.withAlpha(160)),
+                        Icon(Icons.sync_rounded,
+                            size: 18,
+                            color: colorScheme.onPrimary.withAlpha(160)),
                         const SizedBox(width: 8),
                         Text('Sync now'),
                       ],
@@ -410,7 +454,8 @@ class SettingsScreen extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _settingsRow(context,
+              _settingsRow(
+                context,
                 leading: Container(
                   width: 36,
                   height: 36,
@@ -440,8 +485,10 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: 'Version 0.0.1',
               ),
               _thinDivider(context, indent: 60),
-              _settingsRow(context,
-                leading: _iconBox(colorScheme, Icons.code_rounded, color: colorScheme.surfaceContainerHighest),
+              _settingsRow(
+                context,
+                leading: _iconBox(colorScheme, Icons.code_rounded,
+                    color: colorScheme.surfaceContainerHighest),
                 title: 'License',
                 trailing: Text(
                   'MIT',
@@ -453,10 +500,13 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               _thinDivider(context, indent: 60),
-              _settingsRow(context,
-                leading: _iconBox(colorScheme, Icons.open_in_new_rounded, color: colorScheme.surfaceContainerHighest),
+              _settingsRow(
+                context,
+                leading: _iconBox(colorScheme, Icons.open_in_new_rounded,
+                    color: colorScheme.surfaceContainerHighest),
                 title: 'Source code',
-                trailing: Icon(Icons.chevron_right, size: 18, color: colorScheme.onSurfaceVariant),
+                trailing: Icon(Icons.chevron_right,
+                    size: 18, color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -465,7 +515,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handlePinToggle(BuildContext context, WidgetRef ref, bool enabled) async {
+  Future<void> _handlePinToggle(
+      BuildContext context, WidgetRef ref, bool enabled) async {
     if (enabled) {
       final created = await showPinSetupDialog(context, PinSetupMode.create);
       if (created && context.mounted) {
@@ -479,14 +530,17 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleBiometricToggle(BuildContext context, WidgetRef ref, bool enabled) async {
+  Future<void> _handleBiometricToggle(
+      BuildContext context, WidgetRef ref, bool enabled) async {
     if (enabled) {
       final auth = LocalAuthentication();
       final available = await auth.canCheckBiometrics;
       if (!available) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Biometric authentication is not available on this device')),
+            const SnackBar(
+                content: Text(
+                    'Biometric authentication is not available on this device')),
           );
         }
         return;
@@ -582,7 +636,8 @@ class _OptionPicker extends StatelessWidget {
                   GestureDetector(
                     onTap: () => onSelected(value),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
                       child: Row(
                         children: [
                           Icon(
@@ -590,14 +645,18 @@ class _OptionPicker extends StatelessWidget {
                                 ? Icons.check_circle_rounded
                                 : Icons.circle_outlined,
                             size: 20,
-                            color: value == selected ? cs.primary : cs.outlineVariant,
+                            color: value == selected
+                                ? cs.primary
+                                : cs.outlineVariant,
                           ),
                           const SizedBox(width: 12),
                           Text(
                             label,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: value == selected ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight: value == selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
                               color: cs.onSurface,
                             ),
                           ),

@@ -29,10 +29,7 @@ class AosaHeader extends StatelessWidget implements PreferredSizeWidget {
       child: Row(
         children: [
           const SizedBox(width: 8),
-          if (leading != null)
-            leading!
-          else
-            const SizedBox(width: 8),
+          if (leading != null) leading! else const SizedBox(width: 8),
           Expanded(
             child: titleWidget ??
                 (title != null
@@ -63,28 +60,32 @@ class AosaHeader extends StatelessWidget implements PreferredSizeWidget {
 
 Widget aosaBackButton(BuildContext context, {VoidCallback? onPressed}) {
   final cs = Theme.of(context).colorScheme;
-  return Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          cs.primary.withAlpha(30),
-          cs.primary.withAlpha(15),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed ?? () => Navigator.of(context).maybePop(),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                cs.primary.withAlpha(30),
+                cs.primary.withAlpha(15),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: cs.primary.withAlpha(30),
+              width: 0.5,
+            ),
+          ),
+          child: Icon(Icons.arrow_back_rounded, size: 20, color: cs.onSurface),
+        ),
       ),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: cs.primary.withAlpha(30),
-        width: 0.5,
-      ),
-    ),
-    child: IconButton(
-      icon: Icon(Icons.arrow_back_rounded, size: 20, color: cs.onSurface),
-      onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
-      padding: EdgeInsets.zero,
     ),
   );
 }
@@ -94,17 +95,23 @@ Widget aosaIconButton({
   required VoidCallback onPressed,
   Color? color,
 }) {
-  return Container(
-    width: 40,
-    height: 40,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: IconButton(
-      icon: Icon(icon, size: 20),
-      onPressed: onPressed,
-      padding: EdgeInsets.zero,
-      color: color,
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        child: Builder(
+          builder: (context) {
+            final cs = Theme.of(context).colorScheme;
+            return SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(icon, size: 20, color: color ?? cs.onSurface),
+            );
+          },
+        ),
+      ),
     ),
   );
 }

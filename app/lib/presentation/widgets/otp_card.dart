@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../presentation/providers/otp_list_provider.dart';
-import 'aosa_widgets.dart';
 
 class OtpCard extends StatefulWidget {
   final OtpCodeWithAccount item;
@@ -19,8 +20,7 @@ class OtpCard extends StatefulWidget {
   State<OtpCard> createState() => _OtpCardState();
 }
 
-class _OtpCardState extends State<OtpCard>
-    with SingleTickerProviderStateMixin {
+class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isPressed = false;
@@ -58,79 +58,76 @@ class _OtpCardState extends State<OtpCard>
     final account = widget.item.account;
     final code = widget.item.code;
     final isUrgent = code.timeLeft <= 5;
+    final isDark = colorScheme.brightness == Brightness.dark;
 
-    return AosaCard(
-      padding: EdgeInsets.zero,
-      child: AnimatedBuilder(
-        animation: _pulseAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _isPressed ? _pulseAnimation.value : 1.0,
-          child: child,
-        ),
-        child: GestureDetector(
-          onTap: () {
-            _pulseController.reverse();
-            _copyCode(context);
-          },
-          onLongPress: widget.onEdit,
-          onTapDown: (_) {
-            setState(() => _isPressed = true);
-            _pulseController.forward();
-          },
-          onTapUp: (_) {
-            setState(() => _isPressed = false);
-            _pulseController.reverse();
-            HapticFeedback.lightImpact();
-          },
-          onTapCancel: () {
-            setState(() => _isPressed = false);
-            _pulseController.reverse();
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border(
-                left: BorderSide(
-                  color: colorScheme.primary.withAlpha(80),
-                  width: 3,
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _buildAvatar(colorScheme, account.issuer),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              account.issuer,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) => Transform.scale(
+        scale: _isPressed ? _pulseAnimation.value : 1.0,
+        child: child,
+      ),
+      child: GestureDetector(
+        onTap: () {
+          _pulseController.reverse();
+          _copyCode(context);
+        },
+        onLongPress: widget.onEdit,
+        onTapDown: (_) {
+          setState(() => _isPressed = true);
+          _pulseController.forward();
+        },
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          _pulseController.reverse();
+          HapticFeedback.lightImpact();
+        },
+        onTapCancel: () {
+          setState(() => _isPressed = false);
+          _pulseController.reverse();
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF232528) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _buildAvatar(colorScheme, account.issuer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            account.issuer,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
                             ),
-                            Text(
-                              account.accountLabel,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            account.accountLabel,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: colorScheme.onSurfaceVariant,
                             ),
-                          ],
-                        ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      if (account.shortcutKey != null)
-                        Container(
+                    ),
+                    if (account.shortcutKey != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 2,
@@ -148,51 +145,46 @@ class _OtpCardState extends State<OtpCard>
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _formatCode(code.code),
+                      ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isUrgent
+                            ? colorScheme.error.withAlpha(30)
+                            : colorScheme.primary.withAlpha(20),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${code.timeLeft}s',
                         style: TextStyle(
-                          fontSize: 30,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 4,
-                          fontFamily: 'monospace',
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
                           color: isUrgent
-                              ? colorScheme.error.withAlpha(30)
-                              : colorScheme.primary.withAlpha(20),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${code.timeLeft}s',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: isUrgent
-                                ? colorScheme.error
-                                : colorScheme.primary,
-                          ),
+                              ? colorScheme.error
+                              : colorScheme.primary,
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _formatCode(code.code),
+                  style: GoogleFonts.poppins(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 5,
+                    color: colorScheme.onSurface,
                   ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: Stack(
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Stack(
                       children: [
                         Container(
                           height: 4,
@@ -201,7 +193,7 @@ class _OtpCardState extends State<OtpCard>
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           height: 4,
-                          width: double.infinity * code.progress,
+                          width: constraints.maxWidth * code.progress,
                           decoration: BoxDecoration(
                             color: isUrgent
                                 ? colorScheme.error
@@ -212,33 +204,8 @@ class _OtpCardState extends State<OtpCard>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.copy_rounded,
-                        size: 12,
-                        color: colorScheme.onSurfaceVariant.withAlpha(120),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Tap to copy',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          color: colorScheme.onSurfaceVariant.withAlpha(120),
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.more_horiz,
-                        size: 14,
-                        color: colorScheme.onSurfaceVariant.withAlpha(80),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -277,53 +244,59 @@ class _OtpCardState extends State<OtpCard>
   Widget _buildCompactCard(BuildContext context, ColorScheme colorScheme) {
     final account = widget.item.account;
     final code = widget.item.code;
+    final isDark = colorScheme.brightness == Brightness.dark;
 
-    return AosaCard(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: EdgeInsets.zero,
+    return GestureDetector(
       onTap: () => _copyCode(context),
       onLongPress: widget.onEdit,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildAvatar(colorScheme, account.issuer),
-            const SizedBox(height: 8),
-            Text(
-              account.issuer,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF232528) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildAvatar(colorScheme, account.issuer),
+              const SizedBox(height: 8),
+              Text(
+                account.issuer,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _formatCode(code.code),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 3,
-                fontFamily: 'monospace',
-                color: colorScheme.onSurface,
+              const SizedBox(height: 6),
+              Text(
+                _formatCode(code.code),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 3,
+                  fontFamily: 'monospace',
+                  color: colorScheme.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: code.progress,
-                minHeight: 2,
-                color: code.timeLeft <= 5
-                    ? colorScheme.error
-                    : colorScheme.primary,
-                backgroundColor: colorScheme.surfaceContainerHighest,
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: code.progress,
+                  minHeight: 2,
+                  color: code.timeLeft <= 5
+                      ? colorScheme.error
+                      : colorScheme.primary,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -335,19 +308,9 @@ class _OtpCardState extends State<OtpCard>
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, size: 18, color: Colors.greenAccent),
-              const SizedBox(width: 8),
-              const Text('Copied to clipboard'),
-            ],
-          ),
+          content: const Text('Copied to clipboard'),
           duration: const Duration(seconds: 2),
-          action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {},
-            textColor: Colors.white70,
-          ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }

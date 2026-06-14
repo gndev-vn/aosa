@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../data/repositories/otp_repository_impl.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -19,7 +20,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  bool _isSearching = false;
   final _searchController = TextEditingController();
   String _searchQuery = '';
   OtpListNotifier? _otpNotifier;
@@ -78,8 +78,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? items
         : items
             .where((e) =>
-                e.account.issuer.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                e.account.accountLabel.toLowerCase().contains(_searchQuery.toLowerCase()))
+                e.account.issuer
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ||
+                e.account.accountLabel
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()))
             .toList();
 
     return Scaffold(
@@ -87,21 +91,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: Column(
           children: [
             _buildHeader(theme, colorScheme),
+            _buildSearchBar(theme, colorScheme),
             Expanded(
               child: filtered.isEmpty
-                  ? _buildEmptyState(theme, colorScheme, _searchQuery.isNotEmpty)
+                  ? _buildEmptyState(
+                      theme, colorScheme, _searchQuery.isNotEmpty)
                   : RefreshIndicator(
                       onRefresh: () async {
                         HapticFeedback.mediumImpact();
                         await Future.delayed(const Duration(milliseconds: 500));
                       },
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           return OtpCard(
                             item: filtered[index],
-                            onEdit: () => _showOtpActions(context, ref, filtered[index]),
+                            onEdit: () =>
+                                _showOtpActions(context, ref, filtered[index]),
                           ).animate().fadeIn(
                                 duration: 200.ms,
                                 delay: (index * 30).ms,
@@ -153,58 +161,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildHeader(ThemeData theme, ColorScheme colorScheme) {
-    if (_isSearching) {
-      return _buildSearchBar(theme, colorScheme);
-    }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.primary.withAlpha(180),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          const SizedBox(width: 40),
+          Expanded(
             child: Center(
               child: Text(
-                'A',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: colorScheme.onPrimary,
+                'AOSA',
+                style: GoogleFonts.poppins(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Authenticator',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
-            ),
-          ),
-          aosaIconButton(
-            icon: Icons.search,
-            color: colorScheme.onSurface,
-            onPressed: () => setState(() => _isSearching = true),
-          ),
-          const SizedBox(width: 4),
           aosaIconButton(
             icon: Icons.settings,
             color: colorScheme.onSurface,
-            onPressed: () => ref.read(navigationProvider.notifier).goToSettings(),
+            onPressed: () =>
+                ref.read(navigationProvider.notifier).goToSettings(),
           ),
         ],
       ),
@@ -213,56 +192,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildSearchBar(ThemeData theme, ColorScheme colorScheme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        height: 36,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 10),
+            Icon(
+              Icons.search_rounded,
+              size: 16,
+              color: colorScheme.onSurfaceVariant.withAlpha(150),
             ),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = false;
-                      _searchQuery = '';
-                      _searchController.clear();
-                    });
-                  },
-                ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width - 180,
-                  child: TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Search accounts...',
-                      border: InputBorder.none,
-                      filled: false,
-                    ),
-                    onChanged: (v) => setState(() => _searchQuery = v),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Theme(
+                data: theme.copyWith(
+                  inputDecorationTheme: const InputDecorationTheme(
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                if (_searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search accounts...',
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
                   ),
-              ],
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colorScheme.onSurface,
+                  ),
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                ),
+              ),
             ),
-          ),
-        ],
+            if (_searchQuery.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, size: 14),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              ),
+            const SizedBox(width: 4),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme, ColorScheme colorScheme, bool hasFilter) {
+  Widget _buildEmptyState(
+      ThemeData theme, ColorScheme colorScheme, bool hasFilter) {
     if (hasFilter) {
       return Center(
         child: Padding(
@@ -319,35 +312,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 size: 48,
                 color: colorScheme.primary,
               ),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms)
-                .scale(delay: 200.ms, duration: 400.ms, curve: Curves.elasticOut),
+            ).animate().fadeIn(duration: 400.ms).scale(
+                delay: 200.ms, duration: 400.ms, curve: Curves.elasticOut),
             const SizedBox(height: 24),
             Text(
               'No OTP accounts yet',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms, delay: 200.ms),
+            ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
             const SizedBox(height: 10),
             Text(
               'Add your first account to get started',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms, delay: 300.ms),
+            ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
           ],
         ),
       ),
     );
   }
 
-  void _showOtpActions(BuildContext context, WidgetRef ref, OtpCodeWithAccount item) {
+  void _showOtpActions(
+      BuildContext context, WidgetRef ref, OtpCodeWithAccount item) {
     final nav = ref.read(navigationProvider.notifier);
     final repo = ref.read(otpRepositoryProvider);
     final theme = Theme.of(context);
@@ -512,7 +500,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     color: colorScheme.onErrorContainer,
                   ),
                 ),
-                title: Text('Delete account', style: TextStyle(color: colorScheme.error)),
+                title: Text('Delete account',
+                    style: TextStyle(color: colorScheme.error)),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _confirmDelete(context, item, repo);
@@ -525,8 +514,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, OtpCodeWithAccount item, OtpRepositoryImpl repo) async {
+  Future<void> _confirmDelete(BuildContext context, OtpCodeWithAccount item,
+      OtpRepositoryImpl repo) async {
     final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -546,12 +535,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   color: cs.errorContainer,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(Icons.delete_outline_rounded, size: 28, color: cs.onErrorContainer),
+                child: Icon(Icons.delete_outline_rounded,
+                    size: 28, color: cs.onErrorContainer),
               ),
               const SizedBox(height: 16),
               Text(
                 'Delete Account',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface),
               ),
               const SizedBox(height: 8),
               Text(
@@ -571,7 +564,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           border: Border.all(color: cs.outlineVariant),
                         ),
                         child: Center(
-                          child: Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                          child: Text('Cancel',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface)),
                         ),
                       ),
                     ),
@@ -587,7 +584,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           color: cs.error,
                         ),
                         child: Center(
-                          child: Text('Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onError)),
+                          child: Text('Delete',
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onError)),
                         ),
                       ),
                     ),
