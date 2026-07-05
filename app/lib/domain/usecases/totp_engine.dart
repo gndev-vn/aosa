@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:meta/meta.dart';
@@ -8,7 +7,7 @@ class TotpEngine {
   static const int _defaultPeriod = 30;
   static const int _defaultDigits = 6;
   static const String _defaultAlgorithm = 'SHA1';
-  static final _base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  static const _base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
   final int period;
   final int digits;

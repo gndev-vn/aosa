@@ -26,7 +26,6 @@ class _LockScreenState extends ConsumerState<LockScreen>
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
   late final AnimationController _bounceController;
-  late final Animation<double> _bounceAnimation;
   late final AnimationController _successController;
   late final Animation<double> _successScaleAnimation;
   late final Animation<double> _successFadeAnimation;
@@ -45,10 +44,6 @@ class _LockScreenState extends ConsumerState<LockScreen>
     _bounceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
-    );
-    _bounceAnimation = CurvedAnimation(
-      parent: _bounceController,
-      curve: Curves.elasticOut,
     );
 
     _successController = AnimationController(
@@ -445,7 +440,7 @@ class _LockScreenState extends ConsumerState<LockScreen>
   }
 
   Future<void> _verifyPin() async {
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final storedToken = await _readStorage(storage, 'pin_token');
     final storedSalt = await _readStorage(storage, 'pin_salt');
 
@@ -461,16 +456,17 @@ class _LockScreenState extends ConsumerState<LockScreen>
     if (verified) {
       _onUnlockSuccess();
     } else {
-      HapticFeedback.mediumImpact();
+      await HapticFeedback.mediumImpact();
       ref.read(appLockProvider.notifier).recordFailedAttempt();
       setState(() => _enteredPin = '');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Row(
             children: [
               Icon(Icons.error_outline, size: 18, color: Colors.redAccent),
-              const SizedBox(width: 8),
-              const Text('Incorrect PIN'),
+              SizedBox(width: 8),
+              Text('Incorrect PIN'),
             ],
           ),
         ),

@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/domain/entities/totp_code.dart';
 import 'package:aosa/domain/repositories/otp_repository.dart';
 import 'package:aosa/domain/usecases/totp_engine.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'app_init_provider.dart';
 
 final otpRepositoryProvider = Provider<OtpRepositoryImpl>((ref) {
@@ -26,13 +27,11 @@ class OtpCodeWithAccount {
 class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
   Timer? _refreshTimer;
   bool _isRefreshing = false;
-  OtpRepository? _repo;
-  StreamSubscription? _repoSubscription;
+  StreamSubscription<List<OtpAccount>>? _repoSubscription;
 
   OtpListNotifier() : super([]);
 
   void setRepository(OtpRepository repo) {
-    _repo = repo;
     _repoSubscription = repo.watchAll().listen((accounts) {
       if (!_isRefreshing) {
         loadAccounts(accounts);
@@ -53,7 +52,7 @@ class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
           algorithm: a.algorithm,
           digits: a.digits,
         ),
-      ));
+      ),);
     }
     state = items;
     _generateAllCodes();

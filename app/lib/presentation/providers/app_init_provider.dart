@@ -1,9 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:aosa/data/api/api_client.dart';
 import 'package:aosa/data/api/sync_api.dart';
@@ -13,6 +8,9 @@ import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/data/services/auth_service.dart';
 import 'package:aosa/data/services/sync_service.dart';
 import 'package:aosa/domain/repositories/otp_repository.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AppServices {
   final AppDatabase database;
@@ -59,7 +57,7 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
 
   Future<void> initialize() async {
     final db = await AppDatabase.getInstance();
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final apiClient = ApiClient(storage: storage);
 
     final storedSalt = await _readStorage(storage, 'pin_salt');
@@ -69,9 +67,7 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
       crypto = await CryptoService.fromPin('', saltBytes);
     }
 
-    final key = crypto != null ? Uint8List(32) : Uint8List(32);
-
-    final effectiveCrypto = crypto ?? CryptoService(key);
+    final effectiveCrypto = crypto ?? CryptoService(Uint8List(32));
     final authService = AuthService(apiClient, storage: storage);
 
     final repo = OtpRepositoryImpl(db, effectiveCrypto);

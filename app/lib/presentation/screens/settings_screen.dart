@@ -32,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
             AosaHeader(
               leading: aosaBackButton(context,
                   onPressed: () =>
-                      ref.read(navigationProvider.notifier).goToHome()),
+                      ref.read(navigationProvider.notifier).goToHome(),),
               title: 'Settings',
             ),
             const SizedBox(height: 24),
@@ -88,7 +88,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       child: Icon(icon,
           size: 18,
-          color: color != null ? cs.onPrimary : cs.onPrimaryContainer),
+          color: color != null ? cs.onPrimary : cs.onPrimaryContainer,),
     );
   }
 
@@ -136,7 +136,7 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            if (trailing != null) trailing!,
+            if (trailing != null) trailing,
           ],
         ),
       ),
@@ -162,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
     final currentLabel = options.firstWhere((o) => o.$2 == value).$1;
     return GestureDetector(
       onTap: () {
-        showDialog(
+        showDialog<void>(
           context: context,
           builder: (ctx) => _OptionPicker(
             title: '',
@@ -221,18 +221,21 @@ class SettingsScreen extends ConsumerWidget {
                     ('System', 'system'),
                   ],
                   onChanged: (v) {
-                    if (v == 'light')
+                    if (v == 'light') {
                       ref
                           .read(settingsProvider.notifier)
                           .setThemeMode(AppThemeMode.light);
-                    if (v == 'dark')
+                    }
+                    if (v == 'dark') {
                       ref
                           .read(settingsProvider.notifier)
                           .setThemeMode(AppThemeMode.dark);
-                    if (v == 'system')
+                    }
+                    if (v == 'system') {
                       ref
                           .read(settingsProvider.notifier)
                           .setThemeMode(AppThemeMode.system);
+                    }
                   },
                 ),
               ),
@@ -260,7 +263,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Icon(Icons.chevron_right,
-                          size: 18, color: colorScheme.onSurfaceVariant),
+                          size: 18, color: colorScheme.onSurfaceVariant,),
                     ],
                   ),
                   onTap: () => _pickAccentColor(context, ref),
@@ -325,22 +328,26 @@ class SettingsScreen extends ConsumerWidget {
                       ('5 minutes', 'minutes5'),
                     ],
                     onChanged: (v) {
-                      if (v == 'immediate')
+                      if (v == 'immediate') {
                         ref
                             .read(settingsProvider.notifier)
                             .setAutoLockTimeout(AutoLockTimeout.immediate);
-                      if (v == 'seconds30')
+                      }
+                      if (v == 'seconds30') {
                         ref
                             .read(settingsProvider.notifier)
                             .setAutoLockTimeout(AutoLockTimeout.seconds30);
-                      if (v == 'minute1')
+                      }
+                      if (v == 'minute1') {
                         ref
                             .read(settingsProvider.notifier)
                             .setAutoLockTimeout(AutoLockTimeout.minute1);
-                      if (v == 'minutes5')
+                      }
+                      if (v == 'minutes5') {
                         ref
                             .read(settingsProvider.notifier)
                             .setAutoLockTimeout(AutoLockTimeout.minutes5);
+                      }
                     },
                   ),
                 ),
@@ -380,7 +387,9 @@ class SettingsScreen extends ConsumerWidget {
                   value: settings.syncEnabled,
                   onChanged: (v) async {
                     if (v) {
-                      if (context.mounted) _showCloudConfigSheet(context, ref);
+                      if (context.mounted) {
+                        await _showCloudConfigSheet(context, ref);
+                      }
                     } else {
                       final confirmed = await showDialog<bool>(
                         context: context,
@@ -414,7 +423,7 @@ class SettingsScreen extends ConsumerWidget {
                 _settingsRow(
                   context,
                   leading: _iconBox(colorScheme, Icons.dns_outlined,
-                      color: colorScheme.secondaryContainer),
+                      color: colorScheme.secondaryContainer,),
                   title: 'Server',
                   subtitle: isConnected
                       ? 'Connected'
@@ -422,11 +431,11 @@ class SettingsScreen extends ConsumerWidget {
                           ? 'Not configured'
                           : settings.serverUrl),
                   trailing: Icon(Icons.chevron_right,
-                      size: 18, color: colorScheme.onSurfaceVariant),
+                      size: 18, color: colorScheme.onSurfaceVariant,),
                   onTap: () => _showCloudConfigSheet(context, ref),
                 ),
                 if (isConnected) ...[
-                  _thinDivider(context, indent: 60),
+                  _thinDivider(context),
                   _buildReposSection(context, colorScheme, reposAsync, ref),
                   _thinDivider(context),
                   _buildSyncActions(context, colorScheme, syncState, ref),
@@ -439,14 +448,14 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showCloudConfigSheet(BuildContext context, WidgetRef ref) async {
+  Future<void> _showCloudConfigSheet(BuildContext context, WidgetRef ref) async {
     final connected = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _CloudConfigSheet(),
+      builder: (ctx) => const _CloudConfigSheet(),
     );
 
     if (connected != true && context.mounted) {
@@ -468,7 +477,7 @@ class SettingsScreen extends ConsumerWidget {
           title: 'Repos',
           subtitle: 'Manage your repositories',
           trailing: Icon(Icons.chevron_right,
-              size: 18, color: colorScheme.onSurfaceVariant),
+              size: 18, color: colorScheme.onSurfaceVariant,),
           onTap: () => _showRepoManager(context, ref),
         ),
       ],
@@ -518,13 +527,13 @@ class SettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text('Sync completed',
-                  style: TextStyle(fontSize: 13, color: colorScheme.primary)),
+                  style: TextStyle(fontSize: 13, color: colorScheme.primary),),
             ),
           if (syncState == SyncState.error)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text('Sync failed',
-                  style: TextStyle(fontSize: 13, color: colorScheme.error)),
+                  style: TextStyle(fontSize: 13, color: colorScheme.error),),
             ),
         ],
       ),
@@ -534,7 +543,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showRepoManager(BuildContext context, WidgetRef ref) {
     final reposAsync = ref.read(repoProvider);
     reposAsync.whenData((repos) {
-      showModalBottomSheet(
+      showModalBottomSheet<void>(
         context: context,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -600,11 +609,11 @@ class SettingsScreen extends ConsumerWidget {
                 title: 'AOSA',
                 subtitle: 'Version 0.0.1',
               ),
-              _thinDivider(context, indent: 60),
+              _thinDivider(context),
               _settingsRow(
                 context,
                 leading: _iconBox(colorScheme, Icons.code_rounded,
-                    color: colorScheme.surfaceContainerHighest),
+                    color: colorScheme.surfaceContainerHighest,),
                 title: 'License',
                 trailing: Text(
                   'MIT',
@@ -615,14 +624,14 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              _thinDivider(context, indent: 60),
+              _thinDivider(context),
               _settingsRow(
                 context,
                 leading: _iconBox(colorScheme, Icons.open_in_new_rounded,
-                    color: colorScheme.surfaceContainerHighest),
+                    color: colorScheme.surfaceContainerHighest,),
                 title: 'Source code',
                 trailing: Icon(Icons.chevron_right,
-                    size: 18, color: colorScheme.onSurfaceVariant),
+                    size: 18, color: colorScheme.onSurfaceVariant,),
               ),
             ],
           ),
@@ -632,7 +641,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _handlePinToggle(
-      BuildContext context, WidgetRef ref, bool enabled) async {
+      BuildContext context, WidgetRef ref, bool enabled,) async {
     if (enabled) {
       final created = await showPinSetupDialog(context, PinSetupMode.create);
       if (created && context.mounted) {
@@ -647,7 +656,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _handleBiometricToggle(
-      BuildContext context, WidgetRef ref, bool enabled) async {
+      BuildContext context, WidgetRef ref, bool enabled,) async {
     if (enabled) {
       final auth = LocalAuthentication();
       final available = await auth.canCheckBiometrics;
@@ -656,7 +665,7 @@ class SettingsScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text(
-                    'Biometric authentication is not available on this device')),
+                    'Biometric authentication is not available on this device',),),
           );
         }
         return;
@@ -702,7 +711,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _pickAccentColor(BuildContext context, WidgetRef ref) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (_) => const AccentColorPicker(),
     );
@@ -767,7 +776,7 @@ class _CloudConfigSheetState extends ConsumerState<_CloudConfigSheet> {
               const SizedBox(height: 20),
               Text('Server', style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface,
-              )),
+              ),),
               const SizedBox(height: 16),
               TextField(
                 controller: _serverController,
@@ -840,7 +849,7 @@ class _CloudConfigSheetState extends ConsumerState<_CloudConfigSheet> {
                   child: OutlinedButton(
                     onPressed: _onDisconnect,
                     child: Text('Disconnect',
-                        style: TextStyle(color: cs.error)),
+                        style: TextStyle(color: cs.error),),
                   ),
                 ),
               ],
@@ -945,7 +954,7 @@ class _RepoManagerSheetState extends ConsumerState<_RepoManagerSheet> {
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: cs.onSurface)),
+                    color: cs.onSurface,),),
             const SizedBox(height: 8),
             ..._repos.map((repo) => ListTile(
                   dense: true,
@@ -958,13 +967,13 @@ class _RepoManagerSheetState extends ConsumerState<_RepoManagerSheet> {
                   trailing: !repo.isDefault
                       ? IconButton(
                           icon: Icon(Icons.delete_outline,
-                              size: 18, color: cs.error),
+                              size: 18, color: cs.error,),
                           onPressed: () {
                             // TODO: wire up server URL + token
                           },
                         )
                       : null,
-                )),
+                ),),
             const SizedBox(height: 8),
             Center(
               child: OutlinedButton.icon(
@@ -981,7 +990,7 @@ class _RepoManagerSheetState extends ConsumerState<_RepoManagerSheet> {
 
   void _showCreateDialog(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Create Repo'),
@@ -1057,7 +1066,7 @@ class _OptionPicker extends StatelessWidget {
                     onTap: () => onSelected(value),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 14),
+                          horizontal: 20, vertical: 14,),
                       child: Row(
                         children: [
                           Icon(

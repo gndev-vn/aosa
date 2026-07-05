@@ -35,7 +35,7 @@ class SyncService {
         encryptedBlob: item['encrypted_data'] as String,
         expectedVersion: item['expected_version'] as int,
         clientTimestamp: DateTime.parse(item['created_at'] as String),
-      ));
+      ),);
     }
 
     final result = await _syncApi.push(repoId: repoId, changes: changes);

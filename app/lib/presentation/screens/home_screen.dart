@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../data/api/repo_api.dart';
 import '../../data/repositories/otp_repository_impl.dart';
 import '../providers/app_lock_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/otp_list_provider.dart';
 import '../providers/repo_provider.dart';
 import '../providers/settings_provider.dart';
-import '../../data/api/repo_api.dart';
-import '../providers/auth_provider.dart';
 import '../widgets/add_otp_bottom_sheet.dart';
 import '../widgets/aosa_widgets.dart';
 import '../widgets/otp_card.dart';
@@ -97,7 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     .contains(_searchQuery.toLowerCase()) ||
                 e.account.accountLabel
                     .toLowerCase()
-                    .contains(_searchQuery.toLowerCase()))
+                    .contains(_searchQuery.toLowerCase()),)
             .toList();
 
     if (settings.syncEnabled && authFlow != AuthFlow.authenticated) {
@@ -106,8 +107,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Connection to server failed. '
+              const SnackBar(
+                content: Text('Connection to server failed. '
                     'Sync data will remain persistent.'),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -128,15 +129,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Expanded(
               child: filtered.isEmpty
                   ? _buildEmptyState(
-                      theme, colorScheme, _searchQuery.isNotEmpty)
+                      theme, colorScheme, _searchQuery.isNotEmpty,)
                   : RefreshIndicator(
                       onRefresh: () async {
-                        HapticFeedback.mediumImpact();
-                        await Future.delayed(const Duration(milliseconds: 500));
+                        await HapticFeedback.mediumImpact();
+                        await Future<void>.delayed(const Duration(milliseconds: 500));
                       },
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                            horizontal: 16, vertical: 8,),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           return OtpCard(
@@ -235,7 +236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.folder_outlined,
-                                  size: 14, color: colorScheme.primary),
+                                  size: 14, color: colorScheme.primary,),
                               const SizedBox(width: 4),
                               Text(
                                 activeName,
@@ -246,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                               ),
                               Icon(Icons.expand_more,
-                                  size: 14, color: colorScheme.primary),
+                                  size: 14, color: colorScheme.primary,),
                             ],
                           ),
                       ],
@@ -341,7 +342,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             if (_searchQuery.isNotEmpty)
               IconButton(
-                icon: Icon(Icons.clear, size: 14),
+                icon: const Icon(Icons.clear, size: 14),
                 onPressed: () {
                   _searchController.clear();
                   setState(() => _searchQuery = '');
@@ -357,7 +358,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildEmptyState(
-      ThemeData theme, ColorScheme colorScheme, bool hasFilter) {
+      ThemeData theme, ColorScheme colorScheme, bool hasFilter,) {
     if (hasFilter) {
       return Center(
         child: Padding(
@@ -415,7 +416,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 color: colorScheme.primary,
               ),
             ).animate().fadeIn(duration: 400.ms).scale(
-                delay: 200.ms, duration: 400.ms, curve: Curves.elasticOut),
+                delay: 200.ms, duration: 400.ms, curve: Curves.elasticOut,),
             const SizedBox(height: 24),
             Text(
               'No OTP accounts yet',
@@ -437,15 +438,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showOtpActions(
-      BuildContext context, WidgetRef ref, OtpCodeWithAccount item) {
+      BuildContext context, WidgetRef ref, OtpCodeWithAccount item,) {
     final nav = ref.read(navigationProvider.notifier);
     final repo = ref.read(otpRepositoryProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => SafeArea(
@@ -603,7 +604,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 title: Text('Delete account',
-                    style: TextStyle(color: colorScheme.error)),
+                    style: TextStyle(color: colorScheme.error),),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _confirmDelete(context, item, repo);
@@ -617,7 +618,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _confirmDelete(BuildContext context, OtpCodeWithAccount item,
-      OtpRepositoryImpl repo) async {
+      OtpRepositoryImpl repo,) async {
     final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -638,7 +639,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(Icons.delete_outline_rounded,
-                    size: 28, color: cs.onErrorContainer),
+                    size: 28, color: cs.onErrorContainer,),
               ),
               const SizedBox(height: 16),
               Text(
@@ -646,7 +647,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: cs.onSurface),
+                    color: cs.onSurface,),
               ),
               const SizedBox(height: 8),
               Text(
@@ -670,7 +671,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: cs.onSurface)),
+                                  color: cs.onSurface,),),
                         ),
                       ),
                     ),
@@ -690,7 +691,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: cs.onError)),
+                                  color: cs.onError,),),
                         ),
                       ),
                     ),
@@ -704,7 +705,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
     if (confirmed == true) {
       await repo.delete(item.account.id);
-      HapticFeedback.mediumImpact();
+      await HapticFeedback.mediumImpact();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -748,7 +749,7 @@ class _RepoPickerSheet extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: cs.onSurface)),
+                    color: cs.onSurface,),),
             const SizedBox(height: 12),
             ...repos.map((repo) => ListTile(
                   leading: Icon(
@@ -761,13 +762,13 @@ class _RepoPickerSheet extends StatelessWidget {
                       ? Icon(Icons.check, size: 18, color: cs.primary)
                       : Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
                   onTap: () => Navigator.of(context).pop(repo.id),
-                )),
+                ),),
             if (repos.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Text('No repos found',
-                      style: TextStyle(color: cs.onSurfaceVariant)),
+                      style: TextStyle(color: cs.onSurfaceVariant),),
                 ),
               ),
           ],

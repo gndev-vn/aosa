@@ -6,7 +6,7 @@ class SyncApi {
   SyncApi(this._dio);
 
   Future<SyncStatusResult> getStatus({required String repoId}) async {
-    final response = await _dio.get(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/api/v1/sync/status',
       queryParameters: {'repo_id': repoId},
     );
@@ -17,8 +17,8 @@ class SyncApi {
   }
 
   Future<PullResult> pull(
-      {required String repoId, required int sinceVersion}) async {
-    final response = await _dio.get(
+      {required String repoId, required int sinceVersion,}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
       '/api/v1/sync/pull',
       queryParameters: {'repo_id': repoId, 'since_version': sinceVersion},
     );
@@ -33,8 +33,8 @@ class SyncApi {
   }
 
   Future<PushResult> push(
-      {required String repoId, required List<PushChange> changes}) async {
-    final response = await _dio.post('/api/v1/sync/push', data: {
+      {required String repoId, required List<PushChange> changes,}) async {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/sync/push', data: {
       'changes': changes
           .map((c) => {
                 'id': c.id,
@@ -42,9 +42,9 @@ class SyncApi {
                 'encrypted_blob': c.encryptedBlob,
                 'expected_version': c.expectedVersion,
                 'client_timestamp': c.clientTimestamp.toIso8601String(),
-              })
+              },)
           .toList(),
-    });
+    },);
     final data = response.data as Map<String, dynamic>;
     return PushResult(
       accepted: (data['accepted'] as List)

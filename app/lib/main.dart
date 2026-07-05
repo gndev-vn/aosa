@@ -14,7 +14,7 @@ import 'presentation/widgets/app_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
@@ -124,7 +124,7 @@ class _AosaAppState extends ConsumerState<AosaApp> with WidgetsBindingObserver {
             ).animate(CurvedAnimation(
               parent: animation,
               curve: Curves.easeOutCubic,
-            )),
+            ),),
             child: FadeTransition(
               opacity: animation,
               child: ScaleTransition(

@@ -1,7 +1,7 @@
+import 'package:aosa/data/api/user_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:aosa/data/api/user_api.dart';
 
 enum AuthFlow { unauthenticated, authenticating, authenticated }
 
@@ -58,7 +58,7 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
         baseUrl: serverUrl,
         contentType: 'application/json',
         headers: {'Authorization': 'Bearer $token'},
-      ));
+      ),);
       final api = UserApi(dio);
       final me = await api.me();
       await _persist(me.userId, token, '');

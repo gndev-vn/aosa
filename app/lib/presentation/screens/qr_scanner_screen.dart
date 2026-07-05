@@ -104,7 +104,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
+                  const Text(
                     'Scan QR Code',
                     style: TextStyle(
                       fontSize: 20,
@@ -189,7 +189,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     ColorScheme colorScheme,
     BoxConstraints constraints,
   ) {
-    final scanAreaSize = 260.0;
+    const scanAreaSize = 260.0;
     final left = (constraints.maxWidth - scanAreaSize) / 2;
     final top = (constraints.maxHeight - scanAreaSize) / 2 - 40;
     final scanRect = RRect.fromRectAndRadius(
@@ -391,13 +391,13 @@ class _CornerBracketPainter extends CustomPainter {
 
     // Top-left
     canvas.drawLine(
-      Offset(0, cornerLength),
-      Offset(0, 0),
+      const Offset(0, cornerLength),
+      const Offset(0, 0),
       paint,
     );
     canvas.drawLine(
-      Offset(0, 0),
-      Offset(cornerLength, 0),
+      const Offset(0, 0),
+      const Offset(cornerLength, 0),
       paint,
     );
 

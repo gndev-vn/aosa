@@ -1,8 +1,8 @@
 import 'dart:io';
 
+import 'package:aosa/data/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:aosa/data/database/app_database.dart';
 
 class _TestPathProvider extends PathProviderPlatform {
   final Directory tempDir;

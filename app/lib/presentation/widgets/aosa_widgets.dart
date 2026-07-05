@@ -194,7 +194,6 @@ class AosaSwitch extends StatelessWidget {
               ? null
               : Border.all(
                   color: cs.outlineVariant,
-                  width: 1,
                 ),
         ),
         padding: const EdgeInsets.all(3),
@@ -264,7 +263,6 @@ class AosaButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
               color: isActive ? bg : bg.withAlpha(40),
-              width: 1,
             ),
           ),
           child: Center(

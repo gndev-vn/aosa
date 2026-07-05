@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:aosa/data/api/api_client.dart';
 import 'package:aosa/data/api/auth_api.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 enum AuthStatus { unregistered, registered, tokenExpired }
 
@@ -52,9 +52,9 @@ class AuthService {
     );
 
     await _storage.write(
-        key: AuthInterceptor.deviceTokenKey, value: result.deviceToken);
+        key: AuthInterceptor.deviceTokenKey, value: result.deviceToken,);
     await _storage.write(
-        key: AuthInterceptor.refreshTokenKey, value: result.refreshToken);
+        key: AuthInterceptor.refreshTokenKey, value: result.refreshToken,);
   }
 
   Future<bool> refreshToken() async {
@@ -65,9 +65,9 @@ class AuthService {
       _authApi ??= AuthApi(_apiClient.dio);
       final result = await _authApi!.refresh(refreshTk);
       await _storage.write(
-          key: AuthInterceptor.deviceTokenKey, value: result.deviceToken);
+          key: AuthInterceptor.deviceTokenKey, value: result.deviceToken,);
       await _storage.write(
-          key: AuthInterceptor.refreshTokenKey, value: result.refreshToken);
+          key: AuthInterceptor.refreshTokenKey, value: result.refreshToken,);
       return true;
     } catch (_) {
       return false;

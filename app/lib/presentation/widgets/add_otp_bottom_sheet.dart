@@ -1,15 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/domain/usecases/otpauth_parser.dart';
 import 'package:aosa/presentation/screens/qr_scanner_screen.dart';
-import 'package:aosa/presentation/widgets/aosa_widgets.dart';
 import 'package:aosa/presentation/widgets/otp_form.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> showAddOtpSheet(
-    BuildContext context, WidgetRef ref, OtpRepositoryImpl repo) {
+    BuildContext context, WidgetRef ref, OtpRepositoryImpl repo,) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -150,11 +148,11 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
   void _openScanner() {
     Navigator.of(context).push(
-      PageRouteBuilder(
+      PageRouteBuilder<void>(
         pageBuilder: (_, __, ___) => QrScannerScreen(onScan: (data) {
           Navigator.of(context).pop();
           _handleScanResult(data);
-        }),
+        },),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 200),
@@ -186,7 +184,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
   void _showPasteUriDialog() {
     final controller = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => _Dialog(
         icon: Icons.link_rounded,
@@ -209,7 +207,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
   void _showImportDialog() {
     final controller = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => _Dialog(
         icon: Icons.backup_rounded,
@@ -259,10 +257,10 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
     }
 
     if (accounts.isEmpty) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('No valid accounts found in import data')),
+              content: Text('No valid accounts found in import data'),),
         );
       }
       return;
@@ -274,7 +272,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
       imported++;
     }
 
-    if (context.mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Imported $imported account(s)')),
       );
@@ -296,7 +294,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
       await widget.repository.save(account);
 
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${data.issuer} added'),
@@ -306,7 +304,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save: $e'),

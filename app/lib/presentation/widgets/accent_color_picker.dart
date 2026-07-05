@@ -45,10 +45,10 @@ class AccentColorPicker extends ConsumerWidget {
               spacing: 14,
               runSpacing: 14,
               children: _seedColors.map((color) {
-                final selected = color.value == currentColor;
+                final selected = color.toARGB32() == currentColor;
                 return GestureDetector(
                   onTap: () {
-                    ref.read(settingsProvider.notifier).setSeedColor(color.value);
+                    ref.read(settingsProvider.notifier).setSeedColor(color.toARGB32());
                     Navigator.of(context).pop();
                   },
                   child: AnimatedContainer(

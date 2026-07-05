@@ -11,12 +11,12 @@ class AuthApi {
     required String pinPublicSalt,
     required String publicKey,
   }) async {
-    final response = await _dio.post('/api/v1/auth/register', data: {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/auth/register', data: {
       'device_id': deviceId,
       'device_name': deviceName,
       'pin_public_salt': pinPublicSalt,
       'public_key': publicKey,
-    });
+    },);
 
     final data = response.data as Map<String, dynamic>;
     return RegisterResult(
@@ -27,9 +27,9 @@ class AuthApi {
   }
 
   Future<RefreshResult> refresh(String refreshToken) async {
-    final response = await _dio.post('/api/v1/auth/refresh', data: {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/auth/refresh', data: {
       'refresh_token': refreshToken,
-    });
+    },);
 
     final data = response.data as Map<String, dynamic>;
     return RefreshResult(

@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:aosa/domain/usecases/otpauth_parser.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('OtpAuthParser.parse', () {
@@ -88,7 +88,7 @@ void main() {
 
   group('OtpAuthParser.parseUriList', () {
     test('parses multiple URIs from text', () {
-      final text = 'otpauth://totp/Example1:alice@test.com?secret=JBSWY3DPEHPK3PXP&issuer=Example1\n'
+      const text = 'otpauth://totp/Example1:alice@test.com?secret=JBSWY3DPEHPK3PXP&issuer=Example1\n'
           'otpauth://totp/Example2:bob@test.com?secret=GEZDGNBVGY3TQOJQ&issuer=Example2';
       final accounts = OtpAuthParser.parseUriList(text);
       expect(accounts.length, 2);
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('skips empty lines and invalid URIs', () {
-      final text = 'otpauth://totp/Test:test@test.com?secret=JBSWY3DPEHPK3PXP\n\ninvalid\n';
+      const text = 'otpauth://totp/Test:test@test.com?secret=JBSWY3DPEHPK3PXP\n\ninvalid\n';
       final accounts = OtpAuthParser.parseUriList(text);
       expect(accounts.length, 1);
     });
@@ -105,7 +105,7 @@ void main() {
 
   group('OtpAuthParser.parseGoogleAuthExport', () {
     test('parses URI-based format', () {
-      final json = '''
+      const json = '''
       [
         {"uri": "otpauth://totp/Example:alice@test.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"},
         {"uri": "otpauth://totp/ACME:bob@test.com?secret=GEZDGNBVGY3TQOJQ&issuer=ACME"}
@@ -118,7 +118,7 @@ void main() {
     });
 
     test('parses secret-based format', () {
-      final json = '''
+      const json = '''
       [
         {"secret": "JBSWY3DPEHPK3PXP", "issuer": "GitHub", "name": "alice@github.com"},
         {"secret": "GEZDGNBVGY3TQOJQ", "issuer": "Google", "name": "bob@gmail.com"}

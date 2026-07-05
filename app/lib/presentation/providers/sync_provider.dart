@@ -1,7 +1,7 @@
+import 'package:aosa/data/services/auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:aosa/data/services/auth_service.dart';
-import 'package:aosa/data/services/sync_service.dart';
+
 import 'app_init_provider.dart';
 import 'settings_provider.dart';
 

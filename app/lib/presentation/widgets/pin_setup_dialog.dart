@@ -539,7 +539,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
   }
 
   Future<void> _verifyOldPin() async {
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final storedToken = await _readStorage(storage, 'pin_token');
     final storedSalt = await _readStorage(storage, 'pin_salt');
     if (storedToken == null || storedSalt == null) return;
@@ -564,7 +564,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
 
   Future<void> _confirm() async {
     if (widget.mode == PinSetupMode.remove) {
-      final storage = const FlutterSecureStorage();
+      const storage = FlutterSecureStorage();
       final storedToken = await _readStorage(storage, 'pin_token');
       final storedSalt = await _readStorage(storage, 'pin_salt');
       if (storedToken == null || storedSalt == null) return;
@@ -587,7 +587,7 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
     final salt = CryptoService.generateSalt();
     final key = await CryptoService.deriveKey(pin, salt);
     final token = await CryptoService.verifyToken(key);
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     await storage.write(key: 'pin_salt', value: base64Encode(salt));
     await storage.write(key: 'pin_token', value: token);
 

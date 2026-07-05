@@ -1,7 +1,7 @@
+import 'package:aosa/domain/usecases/totp_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:aosa/domain/usecases/totp_engine.dart';
 import 'aosa_widgets.dart';
 
 class OtpFormData {
@@ -152,11 +152,11 @@ class _OtpFormState extends State<OtpForm> {
           const SizedBox(height: 24),
           AosaButton(
             onPressed: _canSave ? _save : null,
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check, size: 18),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text('Save Account'),
               ],
             ),

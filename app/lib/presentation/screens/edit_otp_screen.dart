@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/presentation/providers/navigation_provider.dart';
 import 'package:aosa/presentation/widgets/aosa_widgets.dart';
 import 'package:aosa/presentation/widgets/otp_form.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class EditOtpScreen extends ConsumerWidget {
   final OtpRepositoryImpl repository;
@@ -76,7 +75,7 @@ class EditOtpScreen extends ConsumerWidget {
               actions: [
                 IconButton(
                   icon: Icon(Icons.delete_outline_rounded,
-                      color: colorScheme.error),
+                      color: colorScheme.error,),
                   tooltip: 'Delete account',
                   onPressed: () => _confirmDelete(context, ref),
                 ),
@@ -102,7 +101,7 @@ class EditOtpScreen extends ConsumerWidget {
   }
 
   Future<void> _saveChanges(
-      BuildContext context, WidgetRef ref, OtpFormData data) async {
+      BuildContext context, WidgetRef ref, OtpFormData data,) async {
     final updated = account.copyWith(
       issuer: data.issuer,
       accountLabel: data.accountLabel,
@@ -127,7 +126,7 @@ class EditOtpScreen extends ConsumerWidget {
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -146,7 +145,7 @@ class EditOtpScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(Icons.delete_outline_rounded,
-                    size: 28, color: cs.onErrorContainer),
+                    size: 28, color: cs.onErrorContainer,),
               ),
               const SizedBox(height: 16),
               Text(

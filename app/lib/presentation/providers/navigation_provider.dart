@@ -15,7 +15,7 @@ class NavigationState {
 class NavigationNotifier extends StateNotifier<NavigationState> {
   NavigationNotifier() : super(const NavigationState());
 
-  void goToHome() => state = const NavigationState(currentScreen: AppScreen.home);
+  void goToHome() => state = const NavigationState();
   void goToSettings() => state = const NavigationState(currentScreen: AppScreen.settings);
   void goToEditOtp(String id) => state = NavigationState(
     currentScreen: AppScreen.editOtp,

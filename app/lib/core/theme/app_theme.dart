@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _radius = 16.0;
   static const _radiusSm = 12.0;
   static const _radiusLg = 20.0;
 
   static ThemeData light({required Color seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
-      brightness: Brightness.light,
       surface: const Color(0xFFF8F6F3),
     );
     return _buildTheme(colorScheme, Brightness.light);
@@ -157,7 +155,7 @@ class AppTheme {
       ),
 
       bottomSheetTheme: BottomSheetThemeData(
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(_radiusLg)),
         ),
         elevation: 0,
@@ -175,7 +173,7 @@ class AppTheme {
         ),
         elevation: 2,
         backgroundColor: isDark ? const Color(0xFF2C2F33) : const Color(0xFF1F1F1F),
-        contentTextStyle: TextStyle(
+        contentTextStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: Colors.white,

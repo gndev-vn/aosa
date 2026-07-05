@@ -307,9 +307,9 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
     HapticFeedback.heavyImpact();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Copied to clipboard'),
-          duration: const Duration(seconds: 2),
+        const SnackBar(
+          content: Text('Copied to clipboard'),
+          duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );

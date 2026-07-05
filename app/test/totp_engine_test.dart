@@ -39,7 +39,7 @@ void main() {
   });
 
   group('HOTP (RFC 4226) - SHA1 6-digit', () {
-    final secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+    const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
     test('counter 0 = 755224', () async {
       expect(await TotpEngine.generateHotp(secret, 0), '755224');
@@ -83,7 +83,7 @@ void main() {
   });
 
   group('HOTP - 8 Digit Codes', () {
-    final secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+    const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
     test('counter 0 with 8 digits', () async {
       final result = await TotpEngine.generateHotp(secret, 0, digits: 8);
@@ -130,14 +130,14 @@ void main() {
 
   group('Time Left Calculation', () {
     test('timeLeft is within period range', () {
-      final engine = TotpEngine();
+      const engine = TotpEngine();
       final tl = engine.timeLeft;
       expect(tl, greaterThan(0));
       expect(tl, lessThanOrEqualTo(30));
     });
 
     test('timeLeft with 60s period', () {
-      final engine = TotpEngine(period: 60);
+      const engine = TotpEngine(period: 60);
       final tl = engine.timeLeft;
       expect(tl, greaterThan(0));
       expect(tl, lessThanOrEqualTo(60));
@@ -146,21 +146,21 @@ void main() {
 
   group('Full TOTP Generation', () {
     test('generates 6-digit code by default', () async {
-      final engine = TotpEngine();
+      const engine = TotpEngine();
       final code = await engine.generateCode('JBSWY3DPEHPK3PXP');
       expect(code.length, 6);
       expect(int.tryParse(code), isNotNull);
     });
 
     test('generates 8-digit code', () async {
-      final engine = TotpEngine(digits: 8);
+      const engine = TotpEngine(digits: 8);
       final code = await engine.generateCode('JBSWY3DPEHPK3PXP');
       expect(code.length, 8);
       expect(int.tryParse(code), isNotNull);
     });
 
     test('different codes at different time windows', () async {
-      final engine = TotpEngine();
+      const engine = TotpEngine();
       final code1 = await engine.generateCode(
         'JBSWY3DPEHPK3PXP',
         timestamp: DateTime.fromMillisecondsSinceEpoch(0),
@@ -173,7 +173,7 @@ void main() {
     });
 
     test('same code within same time window', () async {
-      final engine = TotpEngine();
+      const engine = TotpEngine();
       final code1 = await engine.generateCode(
         'JBSWY3DPEHPK3PXP',
         timestamp: DateTime.fromMillisecondsSinceEpoch(0),
@@ -186,19 +186,19 @@ void main() {
     });
 
     test('SHA256 algorithm works', () async {
-      final engine = TotpEngine(algorithm: 'SHA256');
+      const engine = TotpEngine(algorithm: 'SHA256');
       final code = await engine.generateCode('JBSWY3DPEHPK3PXP');
       expect(code.length, 6);
     });
 
     test('SHA512 algorithm works', () async {
-      final engine = TotpEngine(algorithm: 'SHA512');
+      const engine = TotpEngine(algorithm: 'SHA512');
       final code = await engine.generateCode('JBSWY3DPEHPK3PXP');
       expect(code.length, 6);
     });
 
     test('60 second period works', () async {
-      final engine = TotpEngine(period: 60);
+      const engine = TotpEngine(period: 60);
       final code = await engine.generateCode('JBSWY3DPEHPK3PXP');
       expect(code.length, 6);
     });

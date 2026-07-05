@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/presentation/providers/navigation_provider.dart';
 import 'package:aosa/presentation/providers/otp_list_provider.dart';
 import 'package:aosa/presentation/screens/edit_otp_screen.dart';
 import 'package:aosa/presentation/screens/home_screen.dart';
 import 'package:aosa/presentation/screens/settings_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AppScaffold extends ConsumerWidget {
   const AppScaffold({super.key});
@@ -41,7 +40,7 @@ class AppScaffold extends ConsumerWidget {
             ).animate(CurvedAnimation(
               parent: animation,
               curve: Curves.easeOutCubic,
-            )),
+            ),),
             child: FadeTransition(
               opacity: animation,
               child: ScaleTransition(

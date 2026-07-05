@@ -9,10 +9,10 @@ class UserApi {
     required String username,
     required String password,
   }) async {
-    final response = await _dio.post('/api/v1/auth/signup', data: {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/auth/signup', data: {
       'username': username,
       'password': password,
-    });
+    },);
     final data = response.data as Map<String, dynamic>;
     return SignupResult(
       userId: data['user_id'] as String,
@@ -26,10 +26,10 @@ class UserApi {
     required String username,
     required String password,
   }) async {
-    final response = await _dio.post('/api/v1/auth/login', data: {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/auth/login', data: {
       'username': username,
       'password': password,
-    });
+    },);
     final data = response.data as Map<String, dynamic>;
     return LoginResult(
       userId: data['user_id'] as String,
@@ -39,7 +39,7 @@ class UserApi {
   }
 
   Future<MeResult> me() async {
-    final response = await _dio.get('/api/v1/auth/me');
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/auth/me');
     final data = response.data as Map<String, dynamic>;
     return MeResult(
       userId: data['user_id'] as String,

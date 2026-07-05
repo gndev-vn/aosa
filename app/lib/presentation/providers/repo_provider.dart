@@ -1,8 +1,7 @@
+import 'package:aosa/data/api/repo_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:aosa/data/api/repo_api.dart';
-import 'auth_provider.dart';
 
 class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
   final FlutterSecureStorage _storage;
@@ -16,7 +15,7 @@ class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
         baseUrl: serverUrl,
         contentType: 'application/json',
         headers: {'Authorization': 'Bearer $token'},
-      ));
+      ),);
       final api = RepoApi(dio);
       final repos = await api.list();
       state = AsyncValue.data(repos);
@@ -31,7 +30,7 @@ class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
         baseUrl: serverUrl,
         contentType: 'application/json',
         headers: {'Authorization': 'Bearer $token'},
-      ));
+      ),);
       final api = RepoApi(dio);
       await api.create(name);
       await loadRepos(serverUrl, token);
@@ -47,7 +46,7 @@ class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
         baseUrl: serverUrl,
         contentType: 'application/json',
         headers: {'Authorization': 'Bearer $token'},
-      ));
+      ),);
       final api = RepoApi(dio);
       await api.delete(id);
       await loadRepos(serverUrl, token);

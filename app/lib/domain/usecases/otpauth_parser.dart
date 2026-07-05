@@ -111,7 +111,7 @@ class OtpAuthParser {
             if (result != null) {
               accounts.add(result.toAccount(
                 id: _nextId(idCounter++),
-              ));
+              ),);
             }
           } else {
             final secret = item['secret'] as String?;
@@ -123,7 +123,7 @@ class OtpAuthParser {
                 issuer: issuer,
                 accountLabel: name,
                 secretBase32: secret,
-              ));
+              ),);
             }
           }
         }

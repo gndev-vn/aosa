@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:aosa/data/encryption/crypto_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late CryptoService crypto;
@@ -9,7 +9,7 @@ void main() {
   setUp(() {
     crypto = CryptoService(Uint8List.fromList(
       List.generate(32, (i) => i),
-    ));
+    ),);
   });
 
   group('CryptoService', () {
@@ -37,7 +37,7 @@ void main() {
 
       final wrongCrypto = CryptoService(Uint8List.fromList(
         List.generate(32, (i) => 0xff),
-      ));
+      ),);
 
       await expectLater(
         () => wrongCrypto.decrypt(encrypted),

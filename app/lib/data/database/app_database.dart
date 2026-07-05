@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -212,7 +209,7 @@ class AppDatabase {
   }
 
   void dispose() {
-    _db.dispose();
+    _db.close();
     _instance = null;
   }
 
@@ -220,6 +217,6 @@ class AppDatabase {
     return {
       for (final col in row.keys)
         col: row[col],
-    } as Map<String, dynamic>;
+    };
   }
 }

@@ -6,7 +6,7 @@ class RepoApi {
   RepoApi(this._dio);
 
   Future<List<RepoInfo>> list() async {
-    final response = await _dio.get('/api/v1/repos/');
+    final response = await _dio.get<List<dynamic>>('/api/v1/repos/');
     final data = response.data as List;
     return data
         .map((e) => RepoInfo.fromJson(e as Map<String, dynamic>))
@@ -14,9 +14,9 @@ class RepoApi {
   }
 
   Future<RepoInfo> create(String name) async {
-    final response = await _dio.post('/api/v1/repos/', data: {
+    final response = await _dio.post<Map<String, dynamic>>('/api/v1/repos/', data: {
       'name': name,
-    });
+    },);
     final data = response.data as Map<String, dynamic>;
     return RepoInfo(
       id: data['id'] as String,
@@ -28,26 +28,26 @@ class RepoApi {
   }
 
   Future<void> rename(String id, String name) async {
-    await _dio.put('/api/v1/repos/$id', data: {'name': name});
+    await _dio.put<void>('/api/v1/repos/$id', data: {'name': name});
   }
 
   Future<void> delete(String id) async {
-    await _dio.delete('/api/v1/repos/$id');
+    await _dio.delete<void>('/api/v1/repos/$id');
   }
 
   Future<void> share(String id, String username, String role) async {
-    await _dio.post('/api/v1/repos/$id/share', data: {
+    await _dio.post<void>('/api/v1/repos/$id/share', data: {
       'username': username,
       'role': role,
-    });
+    },);
   }
 
   Future<void> unshare(String repoId, String userId) async {
-    await _dio.delete('/api/v1/repos/$repoId/share/$userId');
+    await _dio.delete<void>('/api/v1/repos/$repoId/share/$userId');
   }
 
   Future<List<RepoMember>> members(String id) async {
-    final response = await _dio.get('/api/v1/repos/$id/members');
+    final response = await _dio.get<List<dynamic>>('/api/v1/repos/$id/members');
     final data = response.data as List;
     return data
         .map((e) => RepoMember.fromJson(e as Map<String, dynamic>))

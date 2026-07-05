@@ -11,14 +11,14 @@ class ApiClient {
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 15),
       headers: {'Content-Type': 'application/json'},
-    ));
+    ),);
 
     dio.interceptors.add(AuthInterceptor(_storage));
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
       logPrint: (_) {},
-    ));
+    ),);
   }
 
   void updateBaseUrl(String url) {
@@ -35,8 +35,8 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._storage);
 
   @override
-  void onRequest(
-      RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(
+      RequestOptions options, RequestInterceptorHandler handler,) async {
     final userToken = await _storage.read(key: userTokenKey);
     if (userToken != null && userToken.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $userToken';
@@ -50,7 +50,7 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401) {
       await _storage.delete(key: userTokenKey);
       await _storage.delete(key: userRefreshKey);
