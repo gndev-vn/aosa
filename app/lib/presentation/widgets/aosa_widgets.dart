@@ -61,7 +61,7 @@ class AosaHeader extends StatelessWidget implements PreferredSizeWidget {
 Widget aosaBackButton(BuildContext context, {VoidCallback? onPressed}) {
   final cs = Theme.of(context).colorScheme;
   return ClipRRect(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(20),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
@@ -96,7 +96,7 @@ Widget aosaIconButton({
   Color? color,
 }) {
   return ClipRRect(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(20),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
@@ -240,7 +240,7 @@ class AosaButton extends StatelessWidget {
     this.height = 52,
     this.backgroundColor,
     this.foregroundColor,
-    this.borderRadius = 14,
+    this.borderRadius = 24,
     this.enabled = true,
   });
 

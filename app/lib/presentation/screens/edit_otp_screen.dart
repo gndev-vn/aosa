@@ -2,6 +2,7 @@ import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/presentation/providers/navigation_provider.dart';
 import 'package:aosa/presentation/widgets/aosa_widgets.dart';
+import 'package:aosa/presentation/widgets/confirm_delete_dialog.dart';
 import 'package:aosa/presentation/widgets/otp_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,7 +76,7 @@ class EditOtpScreen extends ConsumerWidget {
               actions: [
                 IconButton(
                   icon: Icon(Icons.delete_outline_rounded,
-                      color: colorScheme.error,),
+                      color: colorScheme.error),
                   tooltip: 'Delete account',
                   onPressed: () => _confirmDelete(context, ref),
                 ),
@@ -101,7 +102,7 @@ class EditOtpScreen extends ConsumerWidget {
   }
 
   Future<void> _saveChanges(
-      BuildContext context, WidgetRef ref, OtpFormData data,) async {
+      BuildContext context, WidgetRef ref, OtpFormData data) async {
     final updated = account.copyWith(
       issuer: data.issuer,
       accountLabel: data.accountLabel,
@@ -124,115 +125,23 @@ class EditOtpScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: cs.surface,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: cs.errorContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Icons.delete_outline_rounded,
-                    size: 28, color: cs.onErrorContainer,),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Delete Account',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Remove ${account.issuer} (${account.accountLabel})? '
-                'This cannot be undone.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cs.onSurfaceVariant,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(ctx).pop(),
-                      child: Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: cs.outlineVariant),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurface,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        Navigator.of(ctx).pop();
-                        await repository.delete(account.id);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${account.issuer} deleted'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          ref.read(navigationProvider.notifier).goToHome();
-                        }
-                      },
-                      child: Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: cs.error,
-                        ),
-                        child: Center(
-                          child: Text(
-                            'Delete',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onError,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDeleteDialog(
+      context,
+      issuer: account.issuer,
+      accountLabel: account.accountLabel,
     );
+    if (confirmed) {
+      await repository.delete(account.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${account.issuer} deleted'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        ref.read(navigationProvider.notifier).goToHome();
+      }
+    }
   }
 }

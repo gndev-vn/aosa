@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const _radiusSm = 12.0;
-  static const _radiusLg = 20.0;
+  static const _radiusLg = 28.0;
+  static const _radiusPill = 24.0;
 
   static ThemeData light({required Color seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
@@ -183,6 +184,27 @@ class AppTheme {
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colorScheme.primary,
         linearTrackColor: colorScheme.surfaceContainerHighest,
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+        ),
       ),
     );
   }

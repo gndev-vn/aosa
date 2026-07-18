@@ -116,18 +116,12 @@ class _OtpFormState extends State<OtpForm> {
               icon: Icons.person_outline,
               onChanged: (_) => _onChanged(),
             ),
-          ]),
-
-          const SizedBox(height: 16),
-          _buildSection('Secret Key', [
             _buildTextField(
               controller: _secretCtrl,
               label: 'Secret Key (Base32)',
               hint: 'e.g. JBSWY3DPEHPK3PXP',
               icon: Icons.key,
               errorText: _secretError,
-              maxLines: 2,
-              textInputAction: TextInputAction.done,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z2-7=]')),
                 UpperCaseTextFormatter(),

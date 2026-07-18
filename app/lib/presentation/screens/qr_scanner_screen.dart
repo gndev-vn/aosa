@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../widgets/corner_bracket_painter.dart';
+import '../widgets/overlay_painter.dart';
+import '../widgets/qr_action.dart';
+
 class QrScannerScreen extends StatefulWidget {
   final ValueChanged<String> onScan;
 
@@ -95,10 +99,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(30),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20, color: Colors.white),
+                      icon: const Icon(Icons.close_rounded,
+                          size: 20, color: Colors.white),
                       onPressed: () => Navigator.of(context).maybePop(),
                       padding: EdgeInsets.zero,
                     ),
@@ -136,24 +141,23 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       final isOn = state.torchState == TorchState.on;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _QrButton(
+                        child: QrAction(
                           icon: isOn
                               ? Icons.flash_on_rounded
                               : Icons.flash_off_rounded,
                           label: isOn ? 'Flash off' : 'Flash on',
-                          onPressed: () =>
-                              _cameraController.toggleTorch(),
+                          onPressed: () => _cameraController.toggleTorch(),
                         ),
                       );
                     },
                   ),
-                  _QrButton(
+                  QrAction(
                     icon: Icons.photo_library_rounded,
                     label: 'Pick from gallery',
                     onPressed: _pickFromGallery,
                   ),
                   const SizedBox(height: 12),
-                  _QrButton(
+                  QrAction(
                     icon: Icons.edit_rounded,
                     label: 'Enter key manually',
                     onPressed: () => widget.onScan(
@@ -201,7 +205,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       children: [
         CustomPaint(
           size: Size(constraints.maxWidth, constraints.maxHeight),
-          painter: _OverlayPainter(
+          painter: OverlayPainter(
             scanRect: scanRect,
             color: Colors.black.withAlpha(160),
           ),
@@ -213,7 +217,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             width: scanAreaSize + 6,
             height: scanAreaSize + 6,
             child: CustomPaint(
-              painter: _CornerBracketPainter(
+              painter: CornerBracketPainter(
                 color: colorScheme.primary,
                 lineWidth: 3,
               ),
@@ -301,143 +305,4 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       if (mounted) setState(() => _isProcessing = false);
     }
   }
-}
-
-class _QrButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  const _QrButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          height: 50,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white38),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 20, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OverlayPainter extends CustomPainter {
-  final RRect scanRect;
-  final Color color;
-
-  _OverlayPainter({required this.scanRect, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outerRect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final outer = RRect.fromRectAndRadius(outerRect, Radius.zero);
-    final path = Path()
-      ..addRRect(outer)
-      ..addRRect(scanRect);
-    canvas.drawPath(
-      Path.combine(PathOperation.reverseDifference, path, Path()..addRRect(scanRect)),
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_OverlayPainter old) =>
-      old.scanRect != scanRect || old.color != color;
-}
-
-class _CornerBracketPainter extends CustomPainter {
-  final Color color;
-  final double lineWidth;
-
-  _CornerBracketPainter({required this.color, required this.lineWidth});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = lineWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    const cornerLength = 24.0;
-
-    // Top-left
-    canvas.drawLine(
-      const Offset(0, cornerLength),
-      const Offset(0, 0),
-      paint,
-    );
-    canvas.drawLine(
-      const Offset(0, 0),
-      const Offset(cornerLength, 0),
-      paint,
-    );
-
-    // Top-right
-    canvas.drawLine(
-      Offset(size.width - cornerLength, 0),
-      Offset(size.width, 0),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width, 0),
-      Offset(size.width, cornerLength),
-      paint,
-    );
-
-    // Bottom-right
-    canvas.drawLine(
-      Offset(size.width, size.height - cornerLength),
-      Offset(size.width, size.height),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width, size.height),
-      Offset(size.width - cornerLength, size.height),
-      paint,
-    );
-
-    // Bottom-left
-    canvas.drawLine(
-      Offset(cornerLength, size.height),
-      Offset(0, size.height),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(0, size.height),
-      Offset(0, size.height - cornerLength),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_CornerBracketPainter old) => old.color != color;
 }

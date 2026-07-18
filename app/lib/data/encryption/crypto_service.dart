@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class CryptoService {
   static const int _saltLength = 32;
@@ -111,6 +112,25 @@ class CryptoService {
     } catch (_) {
       return false;
     }
+  }
+
+  static Future<String?> secureRead(FlutterSecureStorage storage, String key) async {
+    try {
+      return await storage.read(key: key);
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  static Future<bool?> verifyStoredPin(String pin, {FlutterSecureStorage? storage}) async {
+    const store = FlutterSecureStorage();
+    final s = storage ?? store;
+    final storedToken = await secureRead(s, 'pin_token');
+    final storedSalt = await secureRead(s, 'pin_salt');
+    if (storedToken == null || storedSalt == null) return null;
+    final salt = base64Decode(storedSalt);
+    final key = await deriveKey(pin, salt);
+    return verifyPin(key, storedToken);
   }
 }
 
