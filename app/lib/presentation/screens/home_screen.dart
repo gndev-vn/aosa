@@ -58,7 +58,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     final id = ref.read(repoProvider).activeRepoId;
     if (id.isEmpty) {
-      if (services != null) {
+      if (services != null && services.apiClient.hasBaseUrl) {
         await ref.read(repoProvider.notifier).loadRepos(services.apiClient);
         final updated = ref.read(repoProvider).activeRepoId;
         if (mounted) setState(() => _activeRepoId = updated.isEmpty ? null : updated);

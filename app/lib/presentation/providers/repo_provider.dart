@@ -46,13 +46,14 @@ class RepoNotifier extends StateNotifier<RepoState> {
   void setDatabase(AppDatabase db) => _db = db;
 
   Future<void> loadRepos(ApiClient api) async {
+    if (!api.hasBaseUrl) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
       final repos = await RepoApi(api.dio).list();
       final activeId = await _resolveActiveRepoId(repos);
       state = RepoState(repos: repos, activeRepoId: activeId);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Failed to load repos');
+      state = state.copyWith(isLoading: false, error: 'Failed to load repos: $e');
     }
   }
 

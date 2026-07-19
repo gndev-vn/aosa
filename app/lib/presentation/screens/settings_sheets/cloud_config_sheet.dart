@@ -184,7 +184,6 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
   }
 
   Future<void> _onConnect() async {
-    print('[CloudConfig] _onConnect called');
     setState(() {
       _generalError = null;
       _urlError = null;
@@ -194,7 +193,6 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
     });
 
     final serverUrl = _serverController.text.trim();
-    print('[CloudConfig] serverUrl="$serverUrl"');
     final uri = _validateUrl(serverUrl);
     if (uri == null) return;
 
@@ -221,7 +219,6 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
 
     final services = ref.read(appInitProvider);
     if (services == null) {
-      print('[CloudConfig] App services not initialized');
       setState(() {
         _isLoading = false;
         _generalError = 'App not initialized';
@@ -231,17 +228,10 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
 
     final api = services.apiClient;
     api.updateBaseUrl(serverUrl);
-    print('[CloudConfig] Base URL set to: ${api.dio.options.baseUrl}');
 
     try {
-      print('[CloudConfig] Testing health at: ${api.dio.options.baseUrl}/health');
-      final healthResponse = await api.dio.get<Map<String, dynamic>>('health');
-      print('[CloudConfig] Health response: ${healthResponse.data}');
+      await api.dio.get<Map<String, dynamic>>('health');
     } on DioException catch (e) {
-      print('[CloudConfig] Health check failed: ${e.type} status=${e.response?.statusCode} message=${e.message}');
-      if (e.response != null) {
-        print('[CloudConfig] Health response body: ${e.response?.data}');
-      }
       setState(() {
         _isLoading = false;
         _generalError = _humanizeError(e, 'Cannot reach server');
@@ -251,11 +241,9 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
 
     if (_useToken) {
       final token = _tokenController.text.trim();
-      print('[CloudConfig] Connecting with token...');
       final error =
           await ref.read(authProvider.notifier).connectWithToken(api, serverUrl, token);
       if (error != null) {
-        print('[CloudConfig] Token connect failed: $error');
         setState(() {
           _isLoading = false;
           _generalError = error;
@@ -265,11 +253,9 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
     } else {
       final username = _usernameController.text.trim();
       final password = _passwordController.text;
-      print('[CloudConfig] Logging in as: $username');
       final error =
           await ref.read(authProvider.notifier).login(api, username, password);
       if (error != null) {
-        print('[CloudConfig] Login failed: $error');
         setState(() {
           _isLoading = false;
           _generalError = error;
@@ -278,7 +264,6 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
       }
     }
 
-    print('[CloudConfig] Connect successful, saving settings');
     ref.read(settingsProvider.notifier).setServerUrl(serverUrl);
     ref.read(settingsProvider.notifier).toggleSync(true);
     ref.read(appInitProvider.notifier).configureSync(serverUrl);
