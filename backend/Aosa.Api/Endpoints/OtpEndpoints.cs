@@ -4,6 +4,7 @@ using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static Aosa.Api.Endpoints.EndpointHelpers;
 
 namespace Aosa.Api.Endpoints;
 
@@ -11,10 +12,7 @@ public static class OtpEndpoints
 {
     public static void MapOtpEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/v1/otp")
-            .WithTags("OTP Records")
-            .RequireAuthorization()
-            .RequireRateLimiting("Api");
+        var group = app.MapApiGroup("/api/v1/otp", "OTP Records");
 
         group.MapGet("/", async (
             [AsParameters] OtpQuery query,
@@ -31,7 +29,7 @@ public static class OtpEndpoints
 
             return Results.Ok(new
             {
-                items = records.Select(MapToDto),
+                items = records.Select(MapOtpToDto),
             });
         });
 
@@ -140,58 +138,6 @@ public static class OtpEndpoints
             });
         });
     }
-
-    internal static async Task<bool> HasRepoAccess(AosaDbContext db, Guid repoId, ClaimsPrincipal user)
-    {
-        var userId = GetUserId(user);
-        if (userId == Guid.Empty) return false;
-
-        var repo = await db.Repos.FindAsync(repoId);
-        if (repo is null) return false;
-        if (repo.OwnerId == userId) return true;
-
-        return await db.RepoMemberships.AnyAsync(m =>
-            m.RepoId == repoId && m.UserId == userId);
-    }
-
-    internal static async Task IncrementRepoVersion(AosaDbContext db, Guid repoId)
-    {
-        var repoVersion = await db.RepoVersions.FirstOrDefaultAsync(rv => rv.RepoId == repoId);
-        if (repoVersion is not null)
-        {
-            repoVersion.GlobalVersion++;
-            repoVersion.LastUpdatedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            db.RepoVersions.Add(new RepoVersion
-            {
-                Id = Guid.NewGuid(),
-                RepoId = repoId,
-                GlobalVersion = 1,
-                LastUpdatedAt = DateTime.UtcNow
-            });
-        }
-    }
-
-    internal static Guid GetUserId(ClaimsPrincipal user)
-    {
-        var sub = user.FindFirstValue(ClaimTypes.NameIdentifier)
-                  ?? user.FindFirstValue("sub");
-        if (sub is null) return Guid.Empty;
-        return Guid.TryParse(sub, out var id) ? id : Guid.Empty;
-    }
-
-    private static object MapToDto(OtpRecord r) => new
-    {
-        id = r.Id,
-        encrypted_blob = r.EncryptedBlob,
-        version = r.Version,
-        repo_id = r.RepoId,
-        created_at = r.CreatedAt,
-        updated_at = r.UpdatedAt,
-        deleted_at = r.DeletedAt
-    };
 }
 
 public record OtpQuery([FromQuery(Name = "repo_id")] Guid RepoId);

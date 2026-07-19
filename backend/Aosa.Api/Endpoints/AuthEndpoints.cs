@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -101,7 +102,7 @@ public static class AuthEndpoints
                 username = dbUser.Username,
                 created_at = dbUser.CreatedAt
             });
-        }).RequireAuthorization();
+        }).RequireAuthorization("Jwt");
 
         group.MapPost("/refresh", async (
             [FromBody] RefreshRequest request,

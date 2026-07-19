@@ -1,5 +1,6 @@
 import 'package:aosa/data/api/api_client.dart';
 import 'package:aosa/data/api/repo_api.dart';
+import 'package:aosa/data/database/app_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -38,8 +39,11 @@ class RepoState {
 
 class RepoNotifier extends StateNotifier<RepoState> {
   final FlutterSecureStorage _storage;
+  AppDatabase? _db;
 
   RepoNotifier() : _storage = const FlutterSecureStorage(), super(const RepoState());
+
+  void setDatabase(AppDatabase db) => _db = db;
 
   Future<void> loadRepos(ApiClient api) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -69,6 +73,7 @@ class RepoNotifier extends StateNotifier<RepoState> {
       final newActiveId = await _resolveActiveRepoId(remaining);
       state = RepoState(repos: remaining, activeRepoId: newActiveId);
       await _storage.write(key: 'aosa_active_repo_id', value: newActiveId);
+      _db?.setSetting('active_repo_id', newActiveId);
       return null;
     } catch (e) {
       return e.toString();
@@ -77,12 +82,14 @@ class RepoNotifier extends StateNotifier<RepoState> {
 
   Future<void> setActiveRepoId(String id) async {
     await _storage.write(key: 'aosa_active_repo_id', value: id);
+    _db?.setSetting('active_repo_id', id);
     state = state.copyWith(activeRepoId: id);
   }
 
   Future<String> _resolveActiveRepoId(List<RepoInfo> repos) async {
     final stored = await _storage.read(key: 'aosa_active_repo_id');
     if (stored != null && stored.isNotEmpty && repos.any((r) => r.id == stored)) {
+      _db?.setSetting('active_repo_id', stored);
       return stored;
     }
     if (repos.isNotEmpty) {
@@ -91,6 +98,7 @@ class RepoNotifier extends StateNotifier<RepoState> {
         orElse: () => repos.first,
       );
       await _storage.write(key: 'aosa_active_repo_id', value: defaultRepo.id);
+      _db?.setSetting('active_repo_id', defaultRepo.id);
       return defaultRepo.id;
     }
     return '';

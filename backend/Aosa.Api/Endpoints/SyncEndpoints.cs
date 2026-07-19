@@ -1,10 +1,11 @@
-using System.Text.Json.Serialization;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using static Aosa.Api.Endpoints.OtpEndpoints;
+using static Aosa.Api.Endpoints.EndpointHelpers;
 
 namespace Aosa.Api.Endpoints;
 
@@ -12,10 +13,7 @@ public static class SyncEndpoints
 {
     public static void MapSyncEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/v1/sync")
-            .WithTags("Sync")
-            .RequireAuthorization()
-            .RequireRateLimiting("Api");
+        var group = app.MapApiGroup("/api/v1/sync", "Sync");
 
         group.MapGet("/status", async (
             [AsParameters] SyncStatusQuery query,
@@ -52,16 +50,7 @@ public static class SyncEndpoints
 
             return Results.Ok(new
             {
-                items = records.Select(r => new
-                {
-                    id = r.Id,
-                    encrypted_blob = r.EncryptedBlob,
-                    version = r.Version,
-                    repo_id = r.RepoId,
-                    created_at = r.CreatedAt,
-                    updated_at = r.UpdatedAt,
-                    deleted_at = r.DeletedAt
-                }),
+                items = records.Select(MapOtpToDto),
                 server_version = repoVersion?.GlobalVersion ?? 0
             });
         });
@@ -134,7 +123,7 @@ public static class SyncEndpoints
 
 public record SyncStatusQuery([FromQuery(Name = "repo_id")] Guid RepoId);
 public record PullRequest([FromQuery(Name = "repo_id")] Guid RepoId, [FromQuery(Name = "since_version")] long SinceVersion);
-public record PushRequest(List<PushChange> Changes);
+public record PushRequest([FromBody] List<PushChange> Changes);
 
 public class PushChange
 {

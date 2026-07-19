@@ -55,6 +55,7 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         record_id TEXT NOT NULL,
+        repo_id TEXT NOT NULL,
         action TEXT NOT NULL,
         encrypted_data TEXT NOT NULL,
         nonce TEXT NOT NULL,
@@ -170,11 +171,12 @@ class AppDatabase {
   int addToQueue(Map<String, dynamic> data) {
     _db.execute('''
       INSERT INTO sync_queue
-        (record_id, action, encrypted_data, nonce, salt, auth_tag,
+        (record_id, repo_id, action, encrypted_data, nonce, salt, auth_tag,
          expected_version, created_at, retry_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', [
       data['record_id'],
+      data['repo_id'],
       data['action'],
       data['encrypted_data'],
       data['nonce'],
@@ -182,7 +184,7 @@ class AppDatabase {
       data['auth_tag'],
       data['expected_version'],
       data['created_at'],
-      data['retry_count'],
+      data['retry_count'] ?? 0,
     ]);
     return _db.lastInsertRowId;
   }

@@ -84,6 +84,11 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
     if (serverUrl != null && serverUrl.isNotEmpty) {
       configureSync(serverUrl);
     }
+
+    final storedActiveRepoId = await _readStorage(storage, 'aosa_active_repo_id');
+    if (storedActiveRepoId != null && storedActiveRepoId.isNotEmpty) {
+      db.setSetting('active_repo_id', storedActiveRepoId);
+    }
   }
 
   void configureSync(String serverUrl) {

@@ -26,7 +26,8 @@ class SyncService {
   }
 
   Future<void> _pushChanges({required String repoId}) async {
-    final queued = _db.getQueuedItems();
+    final allQueued = _db.getQueuedItems();
+    final queued = allQueued.where((item) => item['repo_id'] == repoId).toList();
     if (queued.isEmpty) return;
 
     final changes = <PushChange>[];

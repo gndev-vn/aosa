@@ -52,9 +52,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _loadActiveRepoId() async {
+    final services = ref.read(appInitProvider);
+    if (services != null) {
+      ref.read(repoProvider.notifier).setDatabase(services.database);
+    }
     final id = ref.read(repoProvider).activeRepoId;
     if (id.isEmpty) {
-      final services = ref.read(appInitProvider);
       if (services != null) {
         await ref.read(repoProvider.notifier).loadRepos(services.apiClient);
         final updated = ref.read(repoProvider).activeRepoId;

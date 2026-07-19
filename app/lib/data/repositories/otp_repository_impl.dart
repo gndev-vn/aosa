@@ -66,11 +66,50 @@ class OtpRepositoryImpl implements OtpRepository {
     } else {
       _db.insertAccount(data);
     }
+
+    _queueChange(data, existing != null);
   }
 
   @override
   Future<void> delete(String id) async {
-    _db.deleteAccount(id);
+    final existing = _db.getAccount(id);
+    if (existing != null) {
+      _db.deleteAccount(id);
+      final payload = EncryptedPayload(
+        ciphertext: existing['encrypted_data'] as String,
+        nonce: existing['nonce'] as String,
+        salt: existing['salt'] as String,
+        authTag: existing['auth_tag'] as String,
+      );
+      _db.addToQueue({
+        'record_id': id,
+        'repo_id': _db.getSetting('active_repo_id') ?? '',
+        'action': 'delete',
+        'encrypted_data': payload.ciphertext,
+        'nonce': payload.nonce,
+        'salt': payload.salt,
+        'auth_tag': payload.authTag,
+        'expected_version': (existing['version'] as int?) ?? 1,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    }
+  }
+
+  void _queueChange(Map<String, dynamic> data, bool isUpdate) {
+    final activeRepoId = _db.getSetting('active_repo_id');
+    if (activeRepoId == null || activeRepoId.isEmpty) return;
+
+    _db.addToQueue({
+      'record_id': data['id'],
+      'repo_id': activeRepoId,
+      'action': isUpdate ? 'update' : 'create',
+      'encrypted_data': data['encrypted_data'],
+      'nonce': data['nonce'],
+      'salt': data['salt'],
+      'auth_tag': data['auth_tag'],
+      'expected_version': isUpdate ? ((data['version'] as int?) ?? 1) : 0,
+      'created_at': data['created_at'],
+    });
   }
 
   @override

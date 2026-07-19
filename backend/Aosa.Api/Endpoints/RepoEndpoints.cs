@@ -4,6 +4,7 @@ using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static Aosa.Api.Endpoints.EndpointHelpers;
 
 namespace Aosa.Api.Endpoints;
 
@@ -11,10 +12,7 @@ public static class RepoEndpoints
 {
     public static void MapRepoEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/v1/repos")
-            .WithTags("Repos")
-            .RequireAuthorization()
-            .RequireRateLimiting("Api");
+        var group = app.MapApiGroup("/api/v1/repos", "Repos");
 
         group.MapGet("/", async (AosaDbContext db, ClaimsPrincipal user) =>
         {
@@ -207,13 +205,6 @@ public static class RepoEndpoints
 
             return Results.Ok(members);
         });
-    }
-
-    private static Guid GetUserId(ClaimsPrincipal user)
-    {
-        var sub = user.FindFirstValue(ClaimTypes.NameIdentifier)
-                  ?? user.FindFirstValue("sub");
-        return Guid.Parse(sub!);
     }
 }
 
