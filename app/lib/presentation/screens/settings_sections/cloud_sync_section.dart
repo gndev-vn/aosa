@@ -120,7 +120,10 @@ class CloudSyncSection extends ConsumerWidget {
       builder: (_) => const CloudConfigSheet(),
     );
 
-    if (connected != true && context.mounted) {
+    if (!context.mounted) return;
+    if (connected == true) {
+      ref.read(settingsProvider.notifier).toggleSync(true);
+    } else {
       ref.read(settingsProvider.notifier).toggleSync(false);
     }
   }

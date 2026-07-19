@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aosa.Api.Endpoints;
@@ -38,7 +39,7 @@ public static class RepoEndpoints
         });
 
         group.MapPost("/", async (
-            CreateRepoRequest request,
+            [FromBody] CreateRepoRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -70,7 +71,7 @@ public static class RepoEndpoints
 
         group.MapPut("/{id:guid}", async (
             Guid id,
-            UpdateRepoRequest request,
+            [FromBody] UpdateRepoRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -113,7 +114,7 @@ public static class RepoEndpoints
 
         group.MapPost("/{id:guid}/share", async (
             Guid id,
-            ShareRepoRequest request,
+            [FromBody] ShareRepoRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -163,17 +164,17 @@ public static class RepoEndpoints
 
         group.MapDelete("/{id:guid}/share/{userId:guid}", async (
             Guid id,
-            Guid targetUserId,
+            Guid userId,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
-            var userId = GetUserId(user);
-            var repo = await db.Repos.FirstOrDefaultAsync(r => r.Id == id && r.OwnerId == userId);
+            var ownerId = GetUserId(user);
+            var repo = await db.Repos.FirstOrDefaultAsync(r => r.Id == id && r.OwnerId == ownerId);
             if (repo is null)
                 return Results.NotFound(new { error = "not_found" });
 
             var membership = await db.RepoMemberships
-                .FirstOrDefaultAsync(m => m.RepoId == id && m.UserId == targetUserId);
+                .FirstOrDefaultAsync(m => m.RepoId == id && m.UserId == userId);
             if (membership is null)
                 return Results.NotFound(new { error = "membership_not_found" });
 
@@ -219,18 +220,18 @@ public static class RepoEndpoints
 public class CreateRepoRequest
 {
     [Required, MinLength(1), MaxLength(64)]
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
 }
 
 public class UpdateRepoRequest
 {
     [Required, MinLength(1), MaxLength(64)]
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = null!;
 }
 
 public class ShareRepoRequest
 {
     [Required]
-    public string Username { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
     public RepoRole Role { get; set; }
 }

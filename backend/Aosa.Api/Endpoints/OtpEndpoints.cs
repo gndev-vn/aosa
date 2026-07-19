@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aosa.Api.Endpoints;
@@ -35,7 +36,7 @@ public static class OtpEndpoints
         });
 
         group.MapPost("/", async (
-            CreateOtpRequest request,
+            [FromBody] CreateOtpRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -67,7 +68,7 @@ public static class OtpEndpoints
 
         group.MapPut("/{id:guid}", async (
             Guid id,
-            UpdateOtpRequest request,
+            [FromBody] UpdateOtpRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -105,7 +106,7 @@ public static class OtpEndpoints
 
         group.MapDelete("/{id:guid}", async (
             Guid id,
-            DeleteOtpRequest request,
+            [FromBody] DeleteOtpRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -193,21 +194,21 @@ public static class OtpEndpoints
     };
 }
 
-public record OtpQuery(Guid RepoId);
+public record OtpQuery([FromQuery(Name = "repo_id")] Guid RepoId);
 
 public class CreateOtpRequest
 {
     public Guid Id { get; set; }
     public Guid RepoId { get; set; }
     [Required]
-    public string EncryptedBlob { get; set; } = string.Empty;
+    public string EncryptedBlob { get; set; } = null!;
     public DateTime ClientTimestamp { get; set; }
 }
 
 public class UpdateOtpRequest
 {
     [Required]
-    public string EncryptedBlob { get; set; } = string.Empty;
+    public string EncryptedBlob { get; set; } = null!;
     [Range(1, int.MaxValue)]
     public int ExpectedVersion { get; set; }
     public DateTime ClientTimestamp { get; set; }

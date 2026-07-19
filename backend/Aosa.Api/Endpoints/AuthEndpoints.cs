@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,7 +18,7 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/v1/auth").WithTags("Authentication").RequireRateLimiting("Auth");
 
         group.MapPost("/signup", async (
-            SignupRequest request,
+            [FromBody] SignupRequest request,
             AosaDbContext db,
             IConfiguration config) =>
         {
@@ -61,7 +62,7 @@ public static class AuthEndpoints
         });
 
         group.MapPost("/login", async (
-            LoginRequest request,
+            [FromBody] LoginRequest request,
             AosaDbContext db,
             IConfiguration config) =>
         {
@@ -103,7 +104,7 @@ public static class AuthEndpoints
         }).RequireAuthorization();
 
         group.MapPost("/refresh", async (
-            RefreshRequest request,
+            [FromBody] RefreshRequest request,
             AosaDbContext db,
             IConfiguration config) =>
         {
@@ -187,21 +188,21 @@ public static class AuthEndpoints
 public class SignupRequest
 {
     [Required, MinLength(3), MaxLength(32)]
-    public string Username { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
     [Required, MinLength(8), MaxLength(128)]
-    public string Password { get; set; } = string.Empty;
+    public string Password { get; set; } = null!;
 }
 
 public class LoginRequest
 {
     [Required]
-    public string Username { get; set; } = string.Empty;
+    public string Username { get; set; } = null!;
     [Required]
-    public string Password { get; set; } = string.Empty;
+    public string Password { get; set; } = null!;
 }
 
 public class RefreshRequest
 {
     [Required]
-    public string RefreshToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = null!;
 }

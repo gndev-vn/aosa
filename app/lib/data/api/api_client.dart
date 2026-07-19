@@ -17,13 +17,18 @@ class ApiClient {
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
-      logPrint: (_) {},
+      logPrint: (obj) => print('[API] $obj'),
     ),);
   }
 
+  static const String apiPrefix = '/api/v1';
+
   void updateBaseUrl(String url) {
-    final clean = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
-    dio.options.baseUrl = clean;
+    var clean = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+    if (clean.endsWith(apiPrefix)) {
+      clean = clean.substring(0, clean.length - apiPrefix.length);
+    }
+    dio.options.baseUrl = '$clean$apiPrefix/';
   }
 
   bool get hasBaseUrl => dio.options.baseUrl.isNotEmpty;

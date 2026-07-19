@@ -1,6 +1,7 @@
 import 'package:aosa/data/api/api_client.dart';
 import 'package:aosa/data/api/repo_api.dart';
 import 'package:aosa/data/api/user_api.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -31,7 +32,7 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       return null;
     } catch (e) {
       state = AuthFlow.unauthenticated;
-      return e.toString();
+      return _humanizeError(e);
     }
   }
 
@@ -44,7 +45,6 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       await _persist(result.userId, result.token, result.refreshToken);
       state = AuthFlow.authenticated;
 
-      // Auto-select default repo after login
       try {
         final repos = await RepoApi(api.dio).list();
         final defaultRepo = repos.firstWhere(
@@ -57,14 +57,13 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       return null;
     } catch (e) {
       state = AuthFlow.unauthenticated;
-      return e.toString();
+      return _humanizeError(e);
     }
   }
 
   Future<String?> connectWithToken(ApiClient api, String serverUrl, String token) async {
     state = AuthFlow.authenticating;
     try {
-      // Set token directly on the shared dio instance for this request
       api.dio.options.headers['Authorization'] = 'Bearer $token';
       final api_ = UserApi(api.dio);
       final me = await api_.me();
@@ -74,7 +73,6 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       await _storage.write(key: _serverUrlKey, value: serverUrl);
       state = AuthFlow.authenticated;
 
-      // Auto-select default repo after connect
       try {
         final repos = await RepoApi(api.dio).list();
         final defaultRepo = repos.firstWhere(
@@ -88,7 +86,7 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     } catch (e) {
       api.dio.options.headers.remove('Authorization');
       state = AuthFlow.unauthenticated;
-      return e.toString();
+      return _humanizeError(e);
     }
   }
 
@@ -107,6 +105,24 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     await _storage.write(key: _tokenKey, value: token);
     await _storage.write(key: _refreshKey, value: refresh);
     await _storage.write(key: _userIdKey, value: userId);
+  }
+
+  static String _humanizeError(Object e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 401) return 'Invalid credentials';
+      if (status == 404) return 'Server not found';
+      if (status == 409) return 'Username already taken';
+      if (status == 429) return 'Too many requests. Try again later';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        return 'Connection timed out';
+      }
+      if (e.type == DioExceptionType.connectionError) {
+        return 'Cannot reach server';
+      }
+    }
+    return 'Something went wrong. Please try again';
   }
 
   static const _tokenKey = 'aosa_user_token';

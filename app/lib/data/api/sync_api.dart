@@ -7,7 +7,7 @@ class SyncApi {
 
   Future<SyncStatusResult> getStatus({required String repoId}) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '/api/v1/sync/status',
+      'sync/status',
       queryParameters: {'repo_id': repoId},
     );
     final data = response.data as Map<String, dynamic>;
@@ -19,7 +19,7 @@ class SyncApi {
   Future<PullResult> pull(
       {required String repoId, required int sinceVersion,}) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      '/api/v1/sync/pull',
+      'sync/pull',
       queryParameters: {'repo_id': repoId, 'since_version': sinceVersion},
     );
     final data = response.data as Map<String, dynamic>;
@@ -34,7 +34,7 @@ class SyncApi {
 
   Future<PushResult> push(
       {required String repoId, required List<PushChange> changes,}) async {
-    final response = await _dio.post<Map<String, dynamic>>('/api/v1/sync/push', data: {
+    final response = await _dio.post<Map<String, dynamic>>('sync/push', data: {
       'changes': changes
           .map((c) => {
                 'id': c.id,

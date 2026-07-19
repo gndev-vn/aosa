@@ -1,6 +1,8 @@
+using System.Text.Json.Serialization;
 using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using static Aosa.Api.Endpoints.OtpEndpoints;
 
@@ -65,7 +67,7 @@ public static class SyncEndpoints
         });
 
         group.MapPost("/push", async (
-            PushRequest request,
+            [FromBody] PushRequest request,
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
@@ -130,7 +132,19 @@ public static class SyncEndpoints
     }
 }
 
-public record SyncStatusQuery(Guid RepoId);
-public record PullRequest(Guid RepoId, long SinceVersion);
+public record SyncStatusQuery([FromQuery(Name = "repo_id")] Guid RepoId);
+public record PullRequest([FromQuery(Name = "repo_id")] Guid RepoId, [FromQuery(Name = "since_version")] long SinceVersion);
 public record PushRequest(List<PushChange> Changes);
-public record PushChange(Guid Id, Guid RepoId, string EncryptedBlob, int ExpectedVersion, DateTime ClientTimestamp);
+
+public class PushChange
+{
+    public Guid Id { get; set; }
+    [JsonPropertyName("repo_id")]
+    public Guid RepoId { get; set; }
+    [JsonPropertyName("encrypted_blob")]
+    public string EncryptedBlob { get; set; } = null!;
+    [JsonPropertyName("expected_version")]
+    public int ExpectedVersion { get; set; }
+    [JsonPropertyName("client_timestamp")]
+    public DateTime ClientTimestamp { get; set; }
+}
