@@ -24,8 +24,9 @@ Future<T?> showSlideBottomSheet<T>(
 class StandardBottomSheet extends StatelessWidget {
   final String title;
   final Widget child;
-  final Widget? leadingAction;
-  final Widget? trailingAction;
+  final String? confirmLabel;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onBack;
   final bool useSafeArea;
   final bool isScrollControlled;
   final EdgeInsetsGeometry? padding;
@@ -34,8 +35,9 @@ class StandardBottomSheet extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
-    this.leadingAction,
-    this.trailingAction,
+    this.confirmLabel,
+    this.onConfirm,
+    this.onBack,
     this.useSafeArea = true,
     this.isScrollControlled = false,
     this.padding,
@@ -49,18 +51,33 @@ class StandardBottomSheet extends StatelessWidget {
         : 0.0;
 
     final sheet = Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
-          _buildGrabber(cs),
-          const SizedBox(height: 4),
           _buildHeader(cs),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: padding ?? const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: child,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.05, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey(title),
+              child: SingleChildScrollView(
+                padding: padding ?? const EdgeInsets.fromLTRB(4, 8, 4, 20),
+                child: child,
+              ),
             ),
           ),
         ],
@@ -73,39 +90,92 @@ class StandardBottomSheet extends StatelessWidget {
     return sheet;
   }
 
-  Widget _buildGrabber(ColorScheme cs) {
-    return Center(
-      child: Container(
-        width: 48,
-        height: 6,
-        decoration: BoxDecoration(
-          color: cs.onSurfaceVariant.withAlpha(80),
-          borderRadius: BorderRadius.circular(4),
-        ),
+  Widget _buildHeader(ColorScheme cs) {
+    final hasBack = onBack != null;
+    final hasConfirm = confirmLabel != null && onConfirm != null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(child: _buildGrabber(cs)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (hasBack)
+                  Positioned(
+                    left: 0,
+                    child: GestureDetector(
+                      onTap: onBack,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Text(
+                          'Back',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Center(
+                  child: Text(
+                    title.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                if (hasConfirm)
+                  Positioned(
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: onConfirm,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: cs.primary,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Text(
+                          confirmLabel!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader(ColorScheme cs) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        children: [
-          if (leadingAction != null) leadingAction! else const SizedBox(width: 40),
-          Expanded(
-            child: Center(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-            ),
-          ),
-          if (trailingAction != null) trailingAction! else const SizedBox(width: 40),
-        ],
+  Widget _buildGrabber(ColorScheme cs) {
+    return Container(
+      width: 48,
+      height: 6,
+      decoration: BoxDecoration(
+        color: cs.onSurfaceVariant.withAlpha(80),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }

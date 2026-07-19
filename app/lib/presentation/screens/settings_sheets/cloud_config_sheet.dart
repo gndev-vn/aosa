@@ -44,6 +44,8 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
     return StandardBottomSheet(
       title: 'Server',
       isScrollControlled: true,
+      confirmLabel: isConnected ? 'Reconnect' : 'Connect',
+      onConfirm: _onConnect,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -103,16 +105,8 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
               textInputAction: TextInputAction.done,
             ),
           ],
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: AosaButton(
-              onPressed: _onConnect,
-              child: Text(isConnected ? 'Reconnect' : 'Connect'),
-            ),
-          ),
           if (isConnected) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(

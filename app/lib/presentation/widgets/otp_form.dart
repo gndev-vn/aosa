@@ -2,8 +2,6 @@ import 'package:aosa/domain/usecases/totp_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'aosa_widgets.dart';
-
 class OtpFormData {
   final String issuer;
   final String accountLabel;
@@ -40,18 +38,20 @@ class OtpFormData {
 class OtpForm extends StatefulWidget {
   final OtpFormData initialData;
   final Future<void> Function(OtpFormData) onSave;
+  final ValueChanged<bool>? onValidChanged;
 
   const OtpForm({
     super.key,
     this.initialData = const OtpFormData(),
     required this.onSave,
+    this.onValidChanged,
   });
 
   @override
-  State<OtpForm> createState() => _OtpFormState();
+  State<OtpForm> createState() => OtpFormState();
 }
 
-class _OtpFormState extends State<OtpForm> {
+class OtpFormState extends State<OtpForm> {
   late final _issuerCtrl = TextEditingController(text: widget.initialData.issuer);
   late final _labelCtrl = TextEditingController(text: widget.initialData.accountLabel);
   late final _secretCtrl = TextEditingController(text: widget.initialData.secretBase32);
@@ -96,8 +96,12 @@ class _OtpFormState extends State<OtpForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onValidChanged?.call(canSave);
+    });
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 16, top: 16, right: 16, bottom: 32),
+      padding: const EdgeInsets.only(bottom: 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -142,19 +146,6 @@ class _OtpFormState extends State<OtpForm> {
               ),
             ),
           ]),
-
-          const SizedBox(height: 24),
-          AosaButton(
-            onPressed: _canSave ? _save : null,
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check, size: 18),
-                SizedBox(width: 8),
-                Text('Save Account'),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -192,7 +183,7 @@ class _OtpFormState extends State<OtpForm> {
     ValueChanged<String>? onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 12),
+      padding: const EdgeInsets.only(top: 6, bottom: 6),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
@@ -212,12 +203,14 @@ class _OtpFormState extends State<OtpForm> {
     );
   }
 
-  bool get _canSave {
+  bool get canSave {
     return _issuerCtrl.text.trim().isNotEmpty &&
         _labelCtrl.text.trim().isNotEmpty &&
         _secretCtrl.text.trim().isNotEmpty &&
         _secretError == null;
   }
+
+  bool get _canSave => canSave;
 
   void _validateSecret() {
     final secret = _secretCtrl.text.trim();
@@ -229,9 +222,15 @@ class _OtpFormState extends State<OtpForm> {
       _secretError = null;
     }
     setState(() {});
+    widget.onValidChanged?.call(canSave);
   }
 
-  void _onChanged() => setState(() {});
+  void _onChanged() {
+    setState(() {});
+    widget.onValidChanged?.call(canSave);
+  }
+
+  Future<void> save() => _save();
 
   Future<void> _save() async {
     if (!_canSave) return;

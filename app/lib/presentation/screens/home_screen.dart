@@ -13,6 +13,7 @@ import '../providers/settings_provider.dart';
 import '../widgets/add_otp_bottom_sheet.dart';
 import '../widgets/aosa_widgets.dart';
 import '../widgets/confirm_delete_dialog.dart';
+import '../widgets/fab_menu.dart';
 import '../widgets/home_empty_state.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/otp_card.dart';
@@ -54,6 +55,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (mounted) setState(() => _activeRepoId = id);
   }
 
+  void _showFabMenu(BuildContext context, WidgetRef ref) {
+    final repo = ref.read(otpRepositoryProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    showFabMenu(context, actions: [
+      FabMenuAction(
+        icon: Icons.qr_code_scanner_rounded,
+        color: cs.primary,
+        onTap: () => showAddOtpSheet(context, ref, repo, startMode: AddOtpMode.scan),
+      ),
+      FabMenuAction(
+        icon: Icons.link_rounded,
+        color: cs.secondary,
+        onTap: () => showAddOtpSheet(context, ref, repo, startMode: AddOtpMode.uri),
+      ),
+      FabMenuAction(
+        icon: Icons.edit_outlined,
+        color: cs.tertiary,
+        onTap: () => showAddOtpSheet(context, ref, repo),
+      ),
+    ]);
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -78,7 +102,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final items = ref.watch(otpListProvider);
     final cs = Theme.of(context).colorScheme;
-    final repo = ref.read(otpRepositoryProvider);
     final settings = ref.watch(settingsProvider);
     final authFlow = ref.watch(authProvider);
     final query = _searchQuery.toLowerCase();
@@ -127,7 +150,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       floatingActionButton: ScaleTransition(
         scale: _fabAnimation,
         child: GestureDetector(
-          onTap: () { HapticFeedback.lightImpact(); showAddOtpSheet(context, ref, repo); },
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _showFabMenu(context, ref);
+          },
           child: Container(
             width: 56, height: 56,
             decoration: BoxDecoration(

@@ -27,10 +27,8 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
     final cs = Theme.of(context).colorScheme;
     return StandardBottomSheet(
       title: 'Repos',
-      trailingAction: IconButton(
-        icon: Icon(Icons.add, size: 20, color: cs.primary),
-        onPressed: () => _showCreateDialog(context),
-      ),
+      confirmLabel: 'Add',
+      onConfirm: () => _showCreateDialog(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
