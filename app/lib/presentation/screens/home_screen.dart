@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../providers/app_init_provider.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -51,8 +52,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _loadActiveRepoId() async {
-    final id = await ref.read(repoProvider.notifier).getActiveRepoId();
-    if (mounted) setState(() => _activeRepoId = id);
+    final id = ref.read(repoProvider).activeRepoId;
+    if (id.isEmpty) {
+      final services = ref.read(appInitProvider);
+      if (services != null) {
+        await ref.read(repoProvider.notifier).loadRepos(services.apiClient);
+        final updated = ref.read(repoProvider).activeRepoId;
+        if (mounted) setState(() => _activeRepoId = updated.isEmpty ? null : updated);
+      }
+    } else {
+      if (mounted) setState(() => _activeRepoId = id);
+    }
   }
 
   void _showFabMenu(BuildContext context, WidgetRef ref) {
@@ -170,9 +180,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildHeader(ColorScheme cs) {
     final settings = ref.watch(settingsProvider);
-    final reposAsync = ref.watch(repoProvider);
+    final reposState = ref.watch(repoProvider);
     final activeName = _activeRepoId != null
-        ? reposAsync.whenData((repos) => repos.where((r) => r.id == _activeRepoId).firstOrNull?.name).valueOrNull
+        ? reposState.repos.where((r) => r.id == _activeRepoId).firstOrNull?.name
         : null;
 
     final title = Text('AOSA', style: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: cs.onSurface));
@@ -204,13 +214,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showRepoPicker() {
-    ref.read(repoProvider).whenData((repos) async {
-      final selected = await showSlideBottomSheet<String>(
-        context,
-        builder: (ctx) => RepoPickerSheet(repos: repos, currentRepoId: _activeRepoId),
-      );
+    final repos = ref.read(repoProvider).repos;
+    if (repos.isEmpty) return;
+    showSlideBottomSheet<String>(
+      context,
+      builder: (ctx) => RepoPickerSheet(repos: repos, currentRepoId: _activeRepoId),
+    ).then((selected) {
       if (selected != null && selected != _activeRepoId) {
-        await ref.read(repoProvider.notifier).setActiveRepoId(selected);
+        ref.read(repoProvider.notifier).setActiveRepoId(selected);
         if (mounted) setState(() => _activeRepoId = selected);
       }
     });

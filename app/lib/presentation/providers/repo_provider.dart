@@ -3,18 +3,52 @@ import 'package:aosa/data/api/repo_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
+class RepoState {
+  final List<RepoInfo> repos;
+  final String activeRepoId;
+  final bool isLoading;
+  final String? error;
+
+  const RepoState({
+    this.repos = const [],
+    this.activeRepoId = '',
+    this.isLoading = false,
+    this.error,
+  });
+
+  RepoState copyWith({
+    List<RepoInfo>? repos,
+    String? activeRepoId,
+    bool? isLoading,
+    String? error,
+  }) {
+    return RepoState(
+      repos: repos ?? this.repos,
+      activeRepoId: activeRepoId ?? this.activeRepoId,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+
+  RepoInfo? get activeRepo {
+    if (repos.isEmpty || activeRepoId.isEmpty) return null;
+    return repos.where((r) => r.id == activeRepoId).firstOrNull;
+  }
+}
+
+class RepoNotifier extends StateNotifier<RepoState> {
   final FlutterSecureStorage _storage;
 
-  RepoNotifier() : _storage = const FlutterSecureStorage(), super(const AsyncValue.loading());
+  RepoNotifier() : _storage = const FlutterSecureStorage(), super(const RepoState());
 
   Future<void> loadRepos(ApiClient api) async {
-    state = const AsyncValue.loading();
+    state = state.copyWith(isLoading: true, error: null);
     try {
       final repos = await RepoApi(api.dio).list();
-      state = AsyncValue.data(repos);
+      final activeId = await _resolveActiveRepoId(repos);
+      state = RepoState(repos: repos, activeRepoId: activeId);
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      state = state.copyWith(isLoading: false, error: 'Failed to load repos');
     }
   }
 
@@ -31,35 +65,39 @@ class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
   Future<String?> deleteRepo(ApiClient api, String id) async {
     try {
       await RepoApi(api.dio).delete(id);
-      await loadRepos(api);
+      final remaining = state.repos.where((r) => r.id != id).toList();
+      final newActiveId = await _resolveActiveRepoId(remaining);
+      state = RepoState(repos: remaining, activeRepoId: newActiveId);
+      await _storage.write(key: 'aosa_active_repo_id', value: newActiveId);
       return null;
     } catch (e) {
       return e.toString();
     }
   }
 
-  Future<String> getActiveRepoId() async {
-    final stored = await _storage.read(key: 'aosa_active_repo_id');
-    if (stored != null && stored.isNotEmpty) return stored;
+  Future<void> setActiveRepoId(String id) async {
+    await _storage.write(key: 'aosa_active_repo_id', value: id);
+    state = state.copyWith(activeRepoId: id);
+  }
 
-    final data = state;
-    if (data.hasValue && data.value!.isNotEmpty) {
-      final defaultRepo = data.value!.firstWhere(
+  Future<String> _resolveActiveRepoId(List<RepoInfo> repos) async {
+    final stored = await _storage.read(key: 'aosa_active_repo_id');
+    if (stored != null && stored.isNotEmpty && repos.any((r) => r.id == stored)) {
+      return stored;
+    }
+    if (repos.isNotEmpty) {
+      final defaultRepo = repos.firstWhere(
         (r) => r.isDefault,
-        orElse: () => data.value!.first,
+        orElse: () => repos.first,
       );
       await _storage.write(key: 'aosa_active_repo_id', value: defaultRepo.id);
       return defaultRepo.id;
     }
     return '';
   }
-
-  Future<void> setActiveRepoId(String id) async {
-    await _storage.write(key: 'aosa_active_repo_id', value: id);
-  }
 }
 
 final repoProvider =
-    StateNotifierProvider<RepoNotifier, AsyncValue<List<RepoInfo>>>(
+    StateNotifierProvider<RepoNotifier, RepoState>(
   (_) => RepoNotifier(),
 );

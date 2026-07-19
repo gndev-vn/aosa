@@ -6,6 +6,7 @@ import '../../providers/settings_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../providers/repo_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/app_init_provider.dart';
 import '../../widgets/aosa_widgets.dart';
 import '../../widgets/standard_bottom_sheet.dart';
 import '../../widgets/settings_helpers.dart';
@@ -23,6 +24,7 @@ class CloudSyncSection extends ConsumerWidget {
     final authFlow = ref.watch(authProvider);
     final syncState = ref.watch(syncProvider);
     final isConnected = authFlow == AuthFlow.authenticated;
+    final reposState = ref.watch(repoProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,11 +94,11 @@ class CloudSyncSection extends ConsumerWidget {
                   const ThinDivider(),
                   SettingsRow(
                     leading: const IconBox(icon: Icons.folder_outlined),
-                    title: 'Repos',
-                    subtitle: 'Manage your repositories',
+                    title: 'Repo',
+                    subtitle: _activeRepoName(reposState),
                     trailing: Icon(Icons.chevron_right,
                         size: 18, color: colorScheme.onSurfaceVariant),
-                    onTap: () => _showRepoManager(context, ref),
+                    onTap: () => _showRepoManager(context),
                   ),
                   const ThinDivider(),
                   _SyncActions(
@@ -112,6 +114,15 @@ class CloudSyncSection extends ConsumerWidget {
     );
   }
 
+  String _activeRepoName(RepoState reposState) {
+    if (reposState.isLoading) return 'Loading...';
+    if (reposState.error != null) return 'Error loading repos';
+    final active = reposState.activeRepo;
+    if (active != null) return active.name;
+    if (reposState.repos.isEmpty) return 'No repos';
+    return 'No repo selected';
+  }
+
   Future<void> _showCloudConfigSheet(
       BuildContext context, WidgetRef ref) async {
     final connected = await showSlideBottomSheet<bool>(
@@ -123,19 +134,24 @@ class CloudSyncSection extends ConsumerWidget {
     if (!context.mounted) return;
     if (connected == true) {
       ref.read(settingsProvider.notifier).toggleSync(true);
+      await _loadReposAndSync(context, ref);
     } else {
       ref.read(settingsProvider.notifier).toggleSync(false);
     }
   }
 
-  void _showRepoManager(BuildContext context, WidgetRef ref) {
-    final reposAsync = ref.read(repoProvider);
-    reposAsync.whenData((repos) {
-      showSlideBottomSheet<void>(
-        context,
-        builder: (_) => RepoManagerSheet(repos: repos),
-      );
-    });
+  Future<void> _loadReposAndSync(BuildContext context, WidgetRef ref) async {
+    final services = ref.read(appInitProvider);
+    if (services == null) return;
+    await ref.read(repoProvider.notifier).loadRepos(services.apiClient);
+    if (context.mounted) await _triggerSync(context, ref);
+  }
+
+  void _showRepoManager(BuildContext context) {
+    showSlideBottomSheet<void>(
+      context,
+      builder: (_) => const RepoManagerSheet(),
+    );
   }
 
   Future<void> _triggerSync(BuildContext context, WidgetRef ref) async {
