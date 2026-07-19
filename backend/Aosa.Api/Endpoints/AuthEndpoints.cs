@@ -1,10 +1,10 @@
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -36,7 +36,6 @@ public static class AuthEndpoints
 
             db.Users.Add(user);
 
-            // create default repo
             var defaultRepo = new Repo
             {
                 Id = Guid.NewGuid(),
@@ -49,7 +48,7 @@ public static class AuthEndpoints
 
             db.Repos.Add(defaultRepo);
 
-            var (jwt, refreshToken) = await GenerateUserTokens(user.Id, db, config);
+            var (jwt, refreshToken) = GenerateUserTokens(user.Id, db, config);
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/v1/users/{user.Id}", new
@@ -72,7 +71,7 @@ public static class AuthEndpoints
 
             user.LastLoginAt = DateTime.UtcNow;
 
-            var (jwt, refreshToken) = await GenerateUserTokens(user.Id, db, config);
+            var (jwt, refreshToken) = GenerateUserTokens(user.Id, db, config);
             await db.SaveChangesAsync();
 
             return Results.Ok(new
@@ -103,49 +102,6 @@ public static class AuthEndpoints
             });
         }).RequireAuthorization();
 
-        group.MapPost("/register", async (
-            RegisterRequest request,
-            AosaDbContext db,
-            IConfiguration config) =>
-        {
-            var existing = await db.DeviceRegistrations
-                .FirstOrDefaultAsync(d => d.DeviceId == request.DeviceId);
-
-            if (existing is not null)
-                return Results.Conflict(new { error = "device_already_registered" });
-
-            var registration = new DeviceRegistration
-            {
-                Id = Guid.NewGuid(),
-                DeviceId = request.DeviceId,
-                DeviceName = request.DeviceName,
-                PinPublicSalt = request.PinPublicSalt,
-                PublicKey = request.PublicKey,
-                RegisteredAt = DateTime.UtcNow
-            };
-
-            db.DeviceRegistrations.Add(registration);
-
-            var syncMeta = new SyncMetadata
-            {
-                Id = Guid.NewGuid(),
-                DeviceId = request.DeviceId,
-                GlobalVersion = 0,
-                LastSyncAt = DateTime.UtcNow
-            };
-            db.SyncMetadatas.Add(syncMeta);
-
-            var (jwt, refreshToken) = await GenerateDeviceTokens(request.DeviceId, db, config);
-            await db.SaveChangesAsync();
-
-            return Results.Created($"/api/v1/devices/{registration.Id}", new
-            {
-                device_token = jwt,
-                refresh_token = refreshToken,
-                server_version = 0
-            });
-        });
-
         group.MapPost("/refresh", async (
             RefreshRequest request,
             AosaDbContext db,
@@ -159,23 +115,16 @@ public static class AuthEndpoints
 
             stored.RevokedAt = DateTime.UtcNow;
 
-            if (stored.DeviceId.HasValue)
-            {
-                var (jwt, newRefreshToken) = await GenerateDeviceTokens(stored.DeviceId.Value, db, config);
-                await db.SaveChangesAsync();
-                return Results.Ok(new { device_token = jwt, refresh_token = newRefreshToken });
-            }
-
-            var (userJwt, userRefresh) = await GenerateUserTokens(stored.UserId, db, config);
+            var (jwt, newRefreshToken) = GenerateUserTokens(stored.UserId, db, config);
             await db.SaveChangesAsync();
-            return Results.Ok(new { token = userJwt, refresh_token = userRefresh });
+            return Results.Ok(new { token = jwt, refresh_token = newRefreshToken });
         });
     }
 
-    private static async Task<(string jwt, string refreshToken)> GenerateUserTokens(
+    private static (string jwt, string refreshToken) GenerateUserTokens(
         Guid userId, AosaDbContext db, IConfiguration config)
     {
-        var (jwt, refreshToken) = GenerateTokenPair(userId.ToString(), db, config);
+        var (jwt, refreshToken) = GenerateTokenPair(userId.ToString(), config);
 
         db.RefreshTokens.Add(new RefreshToken
         {
@@ -189,26 +138,8 @@ public static class AuthEndpoints
         return (jwt, refreshToken);
     }
 
-    private static async Task<(string jwt, string refreshToken)> GenerateDeviceTokens(
-        Guid deviceId, AosaDbContext db, IConfiguration config)
-    {
-        var (jwt, refreshToken) = GenerateTokenPair(deviceId.ToString(), db, config);
-
-        db.RefreshTokens.Add(new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = Guid.Empty,
-            DeviceId = deviceId,
-            TokenHash = HashToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow
-        });
-
-        return (jwt, refreshToken);
-    }
-
     private static (string jwt, string refreshToken) GenerateTokenPair(
-        string subject, AosaDbContext db, IConfiguration config)
+        string subject, IConfiguration config)
     {
         var jwtSection = config.GetSection("Jwt");
         var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
@@ -253,7 +184,24 @@ public static class AuthEndpoints
     }
 }
 
-public record SignupRequest(string Username, string Password);
-public record LoginRequest(string Username, string Password);
-public record RegisterRequest(Guid DeviceId, string DeviceName, string PinPublicSalt, string PublicKey);
-public record RefreshRequest(string RefreshToken);
+public class SignupRequest
+{
+    [Required, MinLength(3), MaxLength(32)]
+    public string Username { get; set; } = string.Empty;
+    [Required, MinLength(8), MaxLength(128)]
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginRequest
+{
+    [Required]
+    public string Username { get; set; } = string.Empty;
+    [Required]
+    public string Password { get; set; } = string.Empty;
+}
+
+public class RefreshRequest
+{
+    [Required]
+    public string RefreshToken { get; set; } = string.Empty;
+}

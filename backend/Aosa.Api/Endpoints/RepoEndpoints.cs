@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
@@ -215,6 +216,21 @@ public static class RepoEndpoints
     }
 }
 
-public record CreateRepoRequest(string Name);
-public record UpdateRepoRequest(string Name);
-public record ShareRepoRequest(string Username, RepoRole Role);
+public class CreateRepoRequest
+{
+    [Required, MinLength(1), MaxLength(64)]
+    public string Name { get; set; } = string.Empty;
+}
+
+public class UpdateRepoRequest
+{
+    [Required, MinLength(1), MaxLength(64)]
+    public string Name { get; set; } = string.Empty;
+}
+
+public class ShareRepoRequest
+{
+    [Required]
+    public string Username { get; set; } = string.Empty;
+    public RepoRole Role { get; set; }
+}

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:aosa/data/api/sync_api.dart';
 import 'package:aosa/data/database/app_database.dart';
@@ -42,6 +43,51 @@ class SyncService {
 
     for (final a in result.accepted) {
       _db.clearQueuedForRecord(a.id, a.newVersion - 1);
+    }
+
+    // Handle conflicts with LWW (Last-Write-Wins) resolution
+    for (final conflict in result.conflicts) {
+      try {
+        // Pull the server's latest version
+        final pullResult = await _syncApi.pull(
+          repoId: repoId,
+          sinceVersion: conflict.serverVersion - 1,
+        );
+
+        final serverRecord = pullResult.items
+            .where((r) => r.id == conflict.id)
+            .firstOrNull;
+        if (serverRecord == null) continue;
+
+        // Get the local queued item for this record
+        final localItem = queued.firstWhere(
+          (q) => q['record_id'] == conflict.id,
+          orElse: () => {},
+        );
+        if (localItem.isEmpty) continue;
+
+        final localTimestamp = DateTime.parse(localItem['created_at'] as String);
+
+        // LWW: if local is newer, re-push with updated expected version
+        if (localTimestamp.isAfter(serverRecord.updatedAt)) {
+          final retryChanges = [PushChange(
+            id: conflict.id,
+            encryptedBlob: localItem['encrypted_data'] as String,
+            expectedVersion: serverRecord.version,
+            clientTimestamp: localTimestamp,
+          )];
+          final retryResult = await _syncApi.push(repoId: repoId, changes: retryChanges);
+          for (final a in retryResult.accepted) {
+            _db.clearQueuedForRecord(a.id, a.newVersion - 1);
+          }
+        } else {
+          // Server wins — clear the local queued item
+          _db.clearQueuedForRecord(conflict.id, 0);
+        }
+      } catch (e) {
+        developer.log('Conflict resolution failed for ${conflict.id}: $e',
+            name: 'SyncService');
+      }
     }
   }
 
@@ -96,7 +142,10 @@ class SyncService {
             record.deletedAt?.toIso8601String(),
           ],
         );
-      } catch (_) {}
+      } catch (e) {
+        developer.log('Failed to decrypt/apply record ${record.id}: $e',
+            name: 'SyncService');
+      }
     }
 
     _setLocalVersion(pullResult.serverVersion);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/app_init_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/aosa_widgets.dart';
@@ -130,6 +131,14 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
 
     ref.read(settingsProvider.notifier).setServerUrl(serverUrl);
 
+    final services = ref.read(appInitProvider);
+    if (services == null) {
+      _showError('App not initialized');
+      return;
+    }
+    final api = services.apiClient;
+    api.updateBaseUrl(serverUrl);
+
     if (_useToken) {
       final token = _tokenController.text.trim();
       if (token.isEmpty) {
@@ -137,11 +146,12 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
         return;
       }
       final error =
-          await ref.read(authProvider.notifier).connectWithToken(serverUrl, token);
+          await ref.read(authProvider.notifier).connectWithToken(api, serverUrl, token);
       if (error != null) {
         _showError(error);
-      } else if (mounted) {
-        Navigator.of(context).pop(true);
+      } else {
+        ref.read(appInitProvider.notifier).configureSync(serverUrl);
+        if (mounted) Navigator.of(context).pop(true);
       }
     } else {
       final username = _usernameController.text.trim();
@@ -152,11 +162,12 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
       }
       final error = await ref
           .read(authProvider.notifier)
-          .login(serverUrl, username, password);
+          .login(api, username, password);
       if (error != null) {
         _showError(error);
-      } else if (mounted) {
-        Navigator.of(context).pop(true);
+      } else {
+        ref.read(appInitProvider.notifier).configureSync(serverUrl);
+        if (mounted) Navigator.of(context).pop(true);
       }
     }
   }

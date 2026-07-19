@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using static Aosa.Api.Endpoints.OtpEndpoints;
 
 namespace Aosa.Api.Endpoints;
 
@@ -19,12 +20,15 @@ public static class SyncEndpoints
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
-            var meta = await db.SyncMetadatas
-                .FirstOrDefaultAsync(m => m.DeviceId == query.RepoId);
+            var repoAccess = await HasRepoAccess(db, query.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
+
+            var repoVersion = await db.RepoVersions
+                .FirstOrDefaultAsync(rv => rv.RepoId == query.RepoId);
 
             return Results.Ok(new
             {
-                server_version = meta?.GlobalVersion ?? 0,
+                server_version = repoVersion?.GlobalVersion ?? 0,
             });
         });
 
@@ -33,13 +37,16 @@ public static class SyncEndpoints
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
+            var repoAccess = await HasRepoAccess(db, request.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
+
             var records = await db.OtpRecords
                 .Where(r => r.RepoId == request.RepoId && r.Version > request.SinceVersion)
                 .OrderBy(r => r.Version)
                 .ToListAsync();
 
-            var meta = await db.SyncMetadatas
-                .FirstOrDefaultAsync(m => m.DeviceId == request.RepoId);
+            var repoVersion = await db.RepoVersions
+                .FirstOrDefaultAsync(rv => rv.RepoId == request.RepoId);
 
             return Results.Ok(new
             {
@@ -53,7 +60,7 @@ public static class SyncEndpoints
                     updated_at = r.UpdatedAt,
                     deleted_at = r.DeletedAt
                 }),
-                server_version = meta?.GlobalVersion ?? 0
+                server_version = repoVersion?.GlobalVersion ?? 0
             });
         });
 
@@ -64,9 +71,13 @@ public static class SyncEndpoints
         {
             var accepted = new List<object>();
             var conflicts = new List<object>();
+            var reposToVersion = new HashSet<Guid>();
 
             foreach (var change in request.Changes)
             {
+                var repoAccess = await HasRepoAccess(db, change.RepoId, user);
+                if (!repoAccess) continue;
+
                 var record = await db.OtpRecords.FindAsync(change.Id);
 
                 if (record is null)
@@ -77,12 +88,12 @@ public static class SyncEndpoints
                         EncryptedBlob = change.EncryptedBlob,
                         Version = 1,
                         RepoId = change.RepoId,
-                        DeviceId = Guid.Empty,
                         CreatedAt = change.ClientTimestamp,
                         UpdatedAt = change.ClientTimestamp,
                     };
                     db.OtpRecords.Add(record);
                     accepted.Add(new { id = change.Id, new_version = 1 });
+                    reposToVersion.Add(change.RepoId);
                 }
                 else if (change.ExpectedVersion == record.Version)
                 {
@@ -90,6 +101,7 @@ public static class SyncEndpoints
                     record.Version++;
                     record.UpdatedAt = change.ClientTimestamp;
                     accepted.Add(new { id = change.Id, new_version = record.Version });
+                    reposToVersion.Add(change.RepoId);
                 }
                 else
                 {
@@ -100,6 +112,11 @@ public static class SyncEndpoints
                         message = "stale version"
                     });
                 }
+            }
+
+            foreach (var repoId in reposToVersion)
+            {
+                await IncrementRepoVersion(db, repoId);
             }
 
             await db.SaveChangesAsync();

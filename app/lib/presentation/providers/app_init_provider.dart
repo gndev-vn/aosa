@@ -68,7 +68,7 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
     }
 
     final effectiveCrypto = crypto ?? CryptoService(Uint8List(32));
-    final authService = AuthService(apiClient, storage: storage);
+    final authService = AuthService(storage: storage);
 
     final repo = OtpRepositoryImpl(db, effectiveCrypto);
     state = AppServices(
@@ -80,7 +80,6 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
       isInitialized: true,
     );
 
-    // init sync if server URL is configured
     final serverUrl = await _readStorage(storage, 'server_url');
     if (serverUrl != null && serverUrl.isNotEmpty) {
       configureSync(serverUrl);

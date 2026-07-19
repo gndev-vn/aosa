@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/api/repo_api.dart';
+import '../../providers/app_init_provider.dart';
+import '../../providers/repo_provider.dart';
 import '../../widgets/standard_bottom_sheet.dart';
 
 class RepoManagerSheet extends ConsumerStatefulWidget {
@@ -48,15 +50,34 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
                     ? IconButton(
                         icon:
                             Icon(Icons.delete_outline, size: 18, color: cs.error),
-                        onPressed: () {
-                          // TODO: wire up server URL + token
-                        },
+                        onPressed: () => _deleteRepo(repo),
                       )
                     : null,
               )),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteRepo(RepoInfo repo) async {
+    final services = ref.read(appInitProvider);
+    if (services == null) return;
+
+    final error = await ref.read(repoProvider.notifier).deleteRepo(
+          services.apiClient,
+          repo.id,
+        );
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+        );
+      }
+      return;
+    }
+    setState(() {
+      _repos.removeWhere((r) => r.id == repo.id);
+    });
   }
 
   void _showCreateDialog(BuildContext context) {
@@ -79,11 +100,29 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               final name = controller.text.trim();
               if (name.isEmpty) return;
-              // TODO: pass serverUrl + token
-              Navigator.of(ctx).pop();
+
+              final services = ref.read(appInitProvider);
+              if (services == null) return;
+
+              final error = await ref.read(repoProvider.notifier).createRepo(
+                    services.apiClient,
+                    name,
+                  );
+              if (error != null) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+                  );
+                }
+                return;
+              }
+
+              if (ctx.mounted) Navigator.of(ctx).pop();
+              final repos = ref.read(repoProvider).valueOrNull ?? [];
+              setState(() => _repos = List.from(repos));
             },
             child: const Text('Create'),
           ),

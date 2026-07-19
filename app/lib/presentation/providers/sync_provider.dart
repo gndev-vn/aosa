@@ -1,4 +1,3 @@
-import 'package:aosa/data/services/auth_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -30,14 +29,8 @@ class SyncNotifier extends StateNotifier<SyncState> {
     final syncService = updated?.syncService;
     if (syncService == null) return 'Failed to initialize sync';
 
-    final authStatus = await services.authService.checkStatus();
-    if (authStatus == AuthStatus.unregistered) {
-      try {
-        await services.authService.register(settings.serverUrl);
-      } catch (e) {
-        return 'Registration failed: $e';
-      }
-    }
+    final hasToken = await services.authService.hasToken();
+    if (!hasToken) return 'Not authenticated. Please log in first.';
 
     state = SyncState.syncing;
     try {

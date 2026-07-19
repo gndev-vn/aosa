@@ -40,11 +40,6 @@ class AuthInterceptor extends Interceptor {
     final userToken = await _storage.read(key: userTokenKey);
     if (userToken != null && userToken.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $userToken';
-    } else {
-      final deviceToken = await _storage.read(key: deviceTokenKey);
-      if (deviceToken != null && deviceToken.isNotEmpty) {
-        options.headers['Authorization'] = 'Bearer $deviceToken';
-      }
     }
     handler.next(options);
   }
@@ -60,6 +55,4 @@ class AuthInterceptor extends Interceptor {
 
   static const String userTokenKey = 'aosa_user_token';
   static const String userRefreshKey = 'aosa_user_refresh';
-  static const String deviceTokenKey = 'aosa_device_token';
-  static const String refreshTokenKey = 'aosa_refresh_token';
 }

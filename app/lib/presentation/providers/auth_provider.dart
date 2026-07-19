@@ -1,5 +1,6 @@
+import 'package:aosa/data/api/api_client.dart';
+import 'package:aosa/data/api/repo_api.dart';
 import 'package:aosa/data/api/user_api.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -17,12 +18,11 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     }
   }
 
-  Future<String?> signup(String serverUrl, String username, String password) async {
+  Future<String?> signup(ApiClient api, String username, String password) async {
     state = AuthFlow.authenticating;
     try {
-      final dio = Dio(BaseOptions(baseUrl: serverUrl, contentType: 'application/json'));
-      final api = UserApi(dio);
-      final result = await api.signup(username: username, password: password);
+      final api_ = UserApi(api.dio);
+      final result = await api_.signup(username: username, password: password);
 
       await _persist(result.userId, result.token, result.refreshToken);
       await _storage.write(key: _activeRepoKey, value: result.defaultRepoId);
@@ -35,15 +35,25 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     }
   }
 
-  Future<String?> login(String serverUrl, String username, String password) async {
+  Future<String?> login(ApiClient api, String username, String password) async {
     state = AuthFlow.authenticating;
     try {
-      final dio = Dio(BaseOptions(baseUrl: serverUrl, contentType: 'application/json'));
-      final api = UserApi(dio);
-      final result = await api.login(username: username, password: password);
+      final api_ = UserApi(api.dio);
+      final result = await api_.login(username: username, password: password);
 
       await _persist(result.userId, result.token, result.refreshToken);
       state = AuthFlow.authenticated;
+
+      // Auto-select default repo after login
+      try {
+        final repos = await RepoApi(api.dio).list();
+        final defaultRepo = repos.firstWhere(
+          (r) => r.isDefault,
+          orElse: () => repos.first,
+        );
+        await _storage.write(key: _activeRepoKey, value: defaultRepo.id);
+      } catch (_) {}
+
       return null;
     } catch (e) {
       state = AuthFlow.unauthenticated;
@@ -51,21 +61,32 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     }
   }
 
-  Future<String?> connectWithToken(String serverUrl, String token) async {
+  Future<String?> connectWithToken(ApiClient api, String serverUrl, String token) async {
     state = AuthFlow.authenticating;
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: serverUrl,
-        contentType: 'application/json',
-        headers: {'Authorization': 'Bearer $token'},
-      ),);
-      final api = UserApi(dio);
-      final me = await api.me();
+      // Set token directly on the shared dio instance for this request
+      api.dio.options.headers['Authorization'] = 'Bearer $token';
+      final api_ = UserApi(api.dio);
+      final me = await api_.me();
+      api.dio.options.headers.remove('Authorization');
+
       await _persist(me.userId, token, '');
       await _storage.write(key: _serverUrlKey, value: serverUrl);
       state = AuthFlow.authenticated;
+
+      // Auto-select default repo after connect
+      try {
+        final repos = await RepoApi(api.dio).list();
+        final defaultRepo = repos.firstWhere(
+          (r) => r.isDefault,
+          orElse: () => repos.first,
+        );
+        await _storage.write(key: _activeRepoKey, value: defaultRepo.id);
+      } catch (_) {}
+
       return null;
     } catch (e) {
+      api.dio.options.headers.remove('Authorization');
       state = AuthFlow.unauthenticated;
       return e.toString();
     }
@@ -75,6 +96,7 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _refreshKey);
     await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _activeRepoKey);
     state = AuthFlow.unauthenticated;
   }
 

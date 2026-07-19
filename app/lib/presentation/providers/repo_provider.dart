@@ -1,5 +1,5 @@
+import 'package:aosa/data/api/api_client.dart';
 import 'package:aosa/data/api/repo_api.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -8,48 +8,30 @@ class RepoNotifier extends StateNotifier<AsyncValue<List<RepoInfo>>> {
 
   RepoNotifier() : _storage = const FlutterSecureStorage(), super(const AsyncValue.loading());
 
-  Future<void> loadRepos(String serverUrl, String token) async {
+  Future<void> loadRepos(ApiClient api) async {
     state = const AsyncValue.loading();
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: serverUrl,
-        contentType: 'application/json',
-        headers: {'Authorization': 'Bearer $token'},
-      ),);
-      final api = RepoApi(dio);
-      final repos = await api.list();
+      final repos = await RepoApi(api.dio).list();
       state = AsyncValue.data(repos);
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
     }
   }
 
-  Future<String?> createRepo(String serverUrl, String token, String name) async {
+  Future<String?> createRepo(ApiClient api, String name) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: serverUrl,
-        contentType: 'application/json',
-        headers: {'Authorization': 'Bearer $token'},
-      ),);
-      final api = RepoApi(dio);
-      await api.create(name);
-      await loadRepos(serverUrl, token);
+      await RepoApi(api.dio).create(name);
+      await loadRepos(api);
       return null;
     } catch (e) {
       return e.toString();
     }
   }
 
-  Future<String?> deleteRepo(String serverUrl, String token, String id) async {
+  Future<String?> deleteRepo(ApiClient api, String id) async {
     try {
-      final dio = Dio(BaseOptions(
-        baseUrl: serverUrl,
-        contentType: 'application/json',
-        headers: {'Authorization': 'Bearer $token'},
-      ),);
-      final api = RepoApi(dio);
-      await api.delete(id);
-      await loadRepos(serverUrl, token);
+      await RepoApi(api.dio).delete(id);
+      await loadRepos(api);
       return null;
     } catch (e) {
       return e.toString();

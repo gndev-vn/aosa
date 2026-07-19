@@ -10,5 +10,5 @@ public class OtpRecord
     public DateTime? DeletedAt { get; set; }
 
     public Guid RepoId { get; set; }
-    public Guid DeviceId { get; set; }
+    public Guid? DeviceId { get; set; }
 }

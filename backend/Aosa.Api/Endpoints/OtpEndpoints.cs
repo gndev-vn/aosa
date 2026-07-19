@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Aosa.Domain.Entities;
 using Aosa.Infrastructure.Data;
@@ -19,6 +20,9 @@ public static class OtpEndpoints
             AosaDbContext db,
             ClaimsPrincipal user) =>
         {
+            var repoAccess = await HasRepoAccess(db, query.RepoId, user);
+            if (!repoAccess) return Results.Forbid();
+
             var records = await db.OtpRecords
                 .Where(r => r.RepoId == query.RepoId && r.DeletedAt == null)
                 .OrderByDescending(r => r.UpdatedAt)
@@ -44,7 +48,6 @@ public static class OtpEndpoints
                 EncryptedBlob = request.EncryptedBlob,
                 Version = 1,
                 RepoId = request.RepoId,
-                DeviceId = GetDeviceId(user),
                 CreatedAt = request.ClientTimestamp,
                 UpdatedAt = request.ClientTimestamp,
             };
@@ -137,7 +140,7 @@ public static class OtpEndpoints
         });
     }
 
-    private static async Task<bool> HasRepoAccess(AosaDbContext db, Guid repoId, ClaimsPrincipal user)
+    internal static async Task<bool> HasRepoAccess(AosaDbContext db, Guid repoId, ClaimsPrincipal user)
     {
         var userId = GetUserId(user);
         if (userId == Guid.Empty) return false;
@@ -150,22 +153,33 @@ public static class OtpEndpoints
             m.RepoId == repoId && m.UserId == userId);
     }
 
-    private static async Task IncrementRepoVersion(AosaDbContext db, Guid repoId)
+    internal static async Task IncrementRepoVersion(AosaDbContext db, Guid repoId)
     {
-        var meta = await db.SyncMetadatas.FirstOrDefaultAsync(m => m.DeviceId == repoId);
-        if (meta is not null)
-            meta.GlobalVersion++;
+        var repoVersion = await db.RepoVersions.FirstOrDefaultAsync(rv => rv.RepoId == repoId);
+        if (repoVersion is not null)
+        {
+            repoVersion.GlobalVersion++;
+            repoVersion.LastUpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            db.RepoVersions.Add(new RepoVersion
+            {
+                Id = Guid.NewGuid(),
+                RepoId = repoId,
+                GlobalVersion = 1,
+                LastUpdatedAt = DateTime.UtcNow
+            });
+        }
     }
 
-    private static Guid GetUserId(ClaimsPrincipal user)
+    internal static Guid GetUserId(ClaimsPrincipal user)
     {
         var sub = user.FindFirstValue(ClaimTypes.NameIdentifier)
                   ?? user.FindFirstValue("sub");
         if (sub is null) return Guid.Empty;
         return Guid.TryParse(sub, out var id) ? id : Guid.Empty;
     }
-
-    private static Guid GetDeviceId(ClaimsPrincipal user) => Guid.Empty;
 
     private static object MapToDto(OtpRecord r) => new
     {
@@ -180,6 +194,27 @@ public static class OtpEndpoints
 }
 
 public record OtpQuery(Guid RepoId);
-public record CreateOtpRequest(Guid Id, Guid RepoId, string EncryptedBlob, DateTime ClientTimestamp);
-public record UpdateOtpRequest(string EncryptedBlob, int ExpectedVersion, DateTime ClientTimestamp);
-public record DeleteOtpRequest(int ExpectedVersion);
+
+public class CreateOtpRequest
+{
+    public Guid Id { get; set; }
+    public Guid RepoId { get; set; }
+    [Required]
+    public string EncryptedBlob { get; set; } = string.Empty;
+    public DateTime ClientTimestamp { get; set; }
+}
+
+public class UpdateOtpRequest
+{
+    [Required]
+    public string EncryptedBlob { get; set; } = string.Empty;
+    [Range(1, int.MaxValue)]
+    public int ExpectedVersion { get; set; }
+    public DateTime ClientTimestamp { get; set; }
+}
+
+public class DeleteOtpRequest
+{
+    [Range(1, int.MaxValue)]
+    public int ExpectedVersion { get; set; }
+}

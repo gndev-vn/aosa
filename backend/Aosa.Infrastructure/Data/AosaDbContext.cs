@@ -14,6 +14,7 @@ public class AosaDbContext : DbContext
     public DbSet<DeviceRegistration> DeviceRegistrations => Set<DeviceRegistration>();
     public DbSet<SyncMetadata> SyncMetadatas => Set<SyncMetadata>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<RepoVersion> RepoVersions => Set<RepoVersion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +74,12 @@ public class AosaDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TokenHash);
             entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<RepoVersion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.RepoId).IsUnique();
         });
     }
 }
