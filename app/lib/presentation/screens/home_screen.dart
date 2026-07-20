@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -11,6 +13,7 @@ import '../providers/navigation_provider.dart';
 import '../providers/otp_list_provider.dart';
 import '../providers/repo_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/sync_provider.dart';
 import '../widgets/add_otp_bottom_sheet.dart';
 import '../widgets/aosa_widgets.dart';
 import '../widgets/confirm_delete_dialog.dart';
@@ -34,6 +37,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   OtpListNotifier? _otpNotifier;
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
+  late AnimationController _breathController;
+  late Animation<double> _breathAnimation;
   String? _activeRepoId;
   bool _shownConnectionError = false;
 
@@ -44,6 +49,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _fabController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fabAnimation = CurvedAnimation(parent: _fabController, curve: Curves.elasticOut);
     _fabController.forward();
+
+    // Breathing idle animation for the FAB
+    _breathController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _breathAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
+      CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpNotifier = ref.read(otpListProvider.notifier);
       _otpNotifier?.startAutoRefresh();
@@ -97,6 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _otpNotifier?.stopAutoRefresh();
     _searchController.dispose();
     _fabController.dispose();
+    _breathController.dispose();
     super.dispose();
   }
 
@@ -122,7 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? items
         : items.where((e) => e.account.issuer.toLowerCase().contains(query) || e.account.accountLabel.toLowerCase().contains(query)).toList();
 
-    if (settings.syncEnabled && authFlow != AuthFlow.authenticated && !_shownConnectionError) {
+    if (settings.syncEnabled && authFlow == AuthFlow.unauthenticated && !_shownConnectionError) {
       _shownConnectionError = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -162,19 +177,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       floatingActionButton: ScaleTransition(
         scale: _fabAnimation,
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            _showFabMenu(context, ref);
+        child: AnimatedBuilder(
+          animation: _breathAnimation,
+          builder: (context, child) {
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.diagonal3Values(
+                1.0 / math.sqrt(_breathAnimation.value),
+                _breathAnimation.value,
+                1.0,
+              ),
+              child: child,
+            );
           },
-          child: Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [cs.primary, cs.primary.withAlpha(200)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [BoxShadow(color: cs.primary.withAlpha(60), blurRadius: 12, offset: const Offset(0, 4))],
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _showFabMenu(context, ref);
+            },
+            child: Container(
+              width: 56, height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [cs.primary, cs.primary.withAlpha(200)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [BoxShadow(color: cs.primary.withAlpha(60), blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Icon(Icons.add, color: cs.onPrimary),
             ),
-            child: Icon(Icons.add, color: cs.onPrimary),
           ),
         ),
       ),
@@ -184,6 +213,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildHeader(ColorScheme cs) {
     final settings = ref.watch(settingsProvider);
     final reposState = ref.watch(repoProvider);
+    final syncState = ref.watch(syncProvider);
+    final authFlow = ref.watch(authProvider);
     final activeName = _activeRepoId != null
         ? reposState.repos.where((r) => r.id == _activeRepoId).firstOrNull?.name
         : null;
@@ -193,7 +224,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
       child: Row(children: [
-        const SizedBox(width: 40),
+        if (settings.syncEnabled && authFlow == AuthFlow.authenticated)
+          aosaIconButton(
+            icon: syncState == SyncState.syncing
+                ? Icons.hourglass_top
+                : Icons.sync_rounded,
+            color: cs.onSurface,
+            onPressed: syncState == SyncState.syncing
+                ? () {}
+                : () => _triggerSync(context),
+          )
+        else
+          const SizedBox(width: 40),
         Expanded(
           child: settings.syncEnabled
               ? GestureDetector(
@@ -228,6 +270,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         if (mounted) setState(() => _activeRepoId = selected);
       }
     });
+  }
+
+  Future<void> _triggerSync(BuildContext context) async {
+    final error = await ref.read(syncProvider.notifier).runSync(ref);
+    if (error != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   void _showOtpActions(BuildContext context, WidgetRef ref, OtpCodeWithAccount item) {

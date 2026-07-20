@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -43,7 +41,8 @@ class _FabMenuOverlay extends StatefulWidget {
 class _FabMenuOverlayState extends State<_FabMenuOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
-  late final Animation<double> _curve;
+  late final Animation<double> _fadeIn;
+  late final List<Animation<double>> _itemAnims;
   bool _dismissing = false;
 
   static const _fabSize = 56.0;
@@ -56,14 +55,21 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _curve = CurvedAnimation(
-      parent: _ctrl,
-      curve: Curves.easeOutBack,
-      reverseCurve: Curves.easeIn,
-    );
-    _ctrl.forward();
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+
+    _fadeIn = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+
+    _itemAnims = List.generate(widget.actions.length, (i) {
+      final start = i * 0.12;
+      final end = (start + 0.5).clamp(0.0, 1.0);
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _ctrl,
+          curve: Interval(start, end, curve: Curves.easeOutBack),
+        ),
+      );
+    });
   }
 
   @override
@@ -75,7 +81,25 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
   void _close() {
     if (_dismissing) return;
     _dismissing = true;
-    _ctrl.reverse().then((_) => dismissFabMenu());
+    _ctrl.reverse().then((_) {
+      if (mounted) dismissFabMenu();
+    });
+  }
+
+  Offset _fabCenter(Size screen, EdgeInsets padding) {
+    return Offset(
+      screen.width - _fabMargin - _fabSize / 2,
+      screen.height - padding.bottom - _fabMargin - _fabSize / 2,
+    );
+  }
+
+  Offset _itemCenter(int index, int total, Size screen, EdgeInsets padding) {
+    final fab = _fabCenter(screen, padding);
+    final reversedIndex = total - 1 - index;
+    return Offset(
+      fab.dx,
+      fab.dy - _fabSize / 2 - _itemSpacing - reversedIndex * (_itemSize + _itemSpacing) - _itemSize / 2,
+    );
   }
 
   @override
@@ -83,40 +107,45 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     final size = MediaQuery.of(context).size;
     final padding = MediaQuery.of(context).padding;
     final cs = Theme.of(context).colorScheme;
-
-    final fabRight = _fabMargin + _fabSize / 2;
-    final fabBottom = padding.bottom + _fabMargin + _fabSize / 2;
+    final total = widget.actions.length;
 
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, _) {
-        final t = _curve.value;
         return Material(
           color: Colors.transparent,
           child: Stack(
             children: [
+              // Dim background
               GestureDetector(
                 onTap: _close,
                 behavior: HitTestBehavior.translucent,
-                child: Container(color: Colors.black.withValues(alpha: 0.3 * t)),
+                child: Container(color: Colors.black.withValues(alpha: 0.3 * _fadeIn.value)),
               ),
-              for (int i = 0; i < widget.actions.length; i++)
-                _buildItem(
-                  widget.actions[i],
-                  i,
-                  t,
-                  size,
-                  padding,
-                  fabRight,
-                  fabBottom,
-                ),
+
+              // Action buttons
+              for (int i = 0; i < total; i++)
+                _buildItem(widget.actions[i], i, total, size, padding, cs),
+
+              // FAB
               Positioned(
                 right: _fabMargin,
                 bottom: padding.bottom + _fabMargin,
-                child: Transform(
-                  transform: Matrix4.identity()..rotateZ(t * math.pi / 4),
-                  alignment: Alignment.center,
-                  child: _buildFab(cs),
+                child: GestureDetector(
+                  onTap: _close,
+                  child: Container(
+                    width: _fabSize,
+                    height: _fabSize,
+                    decoration: BoxDecoration(
+                      color: cs.primary,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: AnimatedRotation(
+                      turns: _fadeIn.value * 0.125, // 45 degrees
+                      duration: Duration.zero,
+                      child: Icon(Icons.add, color: cs.onPrimary, size: 28),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -126,103 +155,40 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     );
   }
 
-  Widget _buildFab(ColorScheme cs) {
-    return GestureDetector(
-      onTap: _close,
-      child: Container(
-        width: _fabSize,
-        height: _fabSize,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [cs.primary, cs.primary.withAlpha(200)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: cs.primary.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(Icons.add, color: cs.onPrimary, size: 28),
-      ),
-    );
-  }
-
   Widget _buildItem(
     FabMenuAction action,
     int index,
-    double t,
-    Size size,
+    int total,
+    Size screen,
     EdgeInsets padding,
-    double fabRight,
-    double fabBottom,
+    ColorScheme cs,
   ) {
-    final total = widget.actions.length;
-    final reversedIndex = total - 1 - index;
+    final d = _itemAnims[index].value;
+    if (d <= 0) return const SizedBox.shrink();
 
-    final targetBottom =
-        fabBottom + _fabSize / 2 + _itemSpacing + reversedIndex * (_itemSize + _itemSpacing);
-
-    final delay = index * 0.12;
-    final itemT = ((t - delay) / (1 - delay)).clamp(0.0, 1.0);
-
-    final springT = Curves.easeOutBack.transform(itemT);
-    final itemBottom = fabBottom + (targetBottom - fabBottom) * springT;
-
-    final scaleX = 0.3 + 0.7 * springT;
-    final scaleY = 0.3 + 0.7 * springT;
-
-    final stretchY = itemT < 0.4
-        ? 1.0 + 0.25 * (1.0 - itemT / 0.4) * math.sin(itemT * math.pi)
-        : 1.0;
-    final stretchX = itemT < 0.4
-        ? 1.0 - 0.12 * (1.0 - itemT / 0.4) * math.sin(itemT * math.pi)
-        : 1.0;
-
-    final opacity = itemT > 0.15 ? ((itemT - 0.15) / 0.6).clamp(0.0, 1.0) : 0.0;
-
-    final wobble = itemT < 0.5
-        ? math.sin(itemT * math.pi * 2) * 3.0 * (1.0 - itemT * 2)
-        : 0.0;
+    final target = _itemCenter(index, total, screen, padding);
+    final fab = _fabCenter(screen, padding);
+    final pos = Offset.lerp(fab, target, d)!;
 
     return Positioned(
-      right: _fabMargin + _fabSize / 2 - _itemSize / 2 + wobble,
-      bottom: itemBottom,
-      child: Opacity(
-        opacity: opacity,
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            _close();
-            Future.delayed(const Duration(milliseconds: 200), action.onTap);
-          },
-          child: Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.diagonal3Values(
-              scaleX * stretchX,
-              scaleY * stretchY,
-              1.0,
+      left: pos.dx - _itemSize / 2,
+      top: pos.dy - _itemSize / 2,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _close();
+          Future.delayed(const Duration(milliseconds: 200), action.onTap);
+        },
+        child: ScaleTransition(
+          scale: _itemAnims[index],
+          child: Container(
+            width: _itemSize,
+            height: _itemSize,
+            decoration: BoxDecoration(
+              color: action.color,
+              shape: BoxShape.circle,
             ),
-            child: Container(
-              width: _itemSize,
-              height: _itemSize,
-              decoration: BoxDecoration(
-                color: action.color,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: action.color.withValues(alpha: 0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Icon(action.icon, size: 20, color: Colors.white),
-            ),
+            child: Icon(action.icon, size: 20, color: Colors.white),
           ),
         ),
       ),

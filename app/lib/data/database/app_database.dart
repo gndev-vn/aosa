@@ -199,6 +199,18 @@ class AppDatabase {
     _db.execute('DELETE FROM sync_queue');
   }
 
+  /// Removes sync queue entries whose record_id is not a valid UUID.
+  /// This handles records created before the UUID migration.
+  int clearInvalidQueueEntries() {
+    final before = _db.select('SELECT COUNT(*) AS count FROM sync_queue').first['count'] as int;
+    // UUID format: 8-4-4-4-12 hex chars = 36 chars total with dashes
+    _db.execute(
+      "DELETE FROM sync_queue WHERE length(record_id) != 36 OR substr(record_id, 9, 1) != '-' OR substr(record_id, 14, 1) != '-' OR substr(record_id, 19, 1) != '-' OR substr(record_id, 24, 1) != '-'",
+    );
+    final after = _db.select('SELECT COUNT(*) AS count FROM sync_queue').first['count'] as int;
+    return before - after;
+  }
+
   void clearQueuedForRecord(String recordId, int version) {
     _db.execute(
       'DELETE FROM sync_queue WHERE record_id = ? AND expected_version = ?',

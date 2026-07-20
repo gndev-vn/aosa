@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'domain/entities/app_settings.dart';
 import 'presentation/providers/app_init_provider.dart';
 import 'presentation/providers/app_lock_provider.dart';
+import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/otp_list_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/screens/lock_screen.dart';
@@ -22,6 +23,7 @@ void main() async {
   final container = ProviderContainer();
   await container.read(appInitProvider.notifier).initialize();
   await container.read(settingsProvider.notifier).load();
+  await container.read(authProvider.notifier).checkSession();
   final services = container.read(appInitProvider);
 
   if (services != null) {

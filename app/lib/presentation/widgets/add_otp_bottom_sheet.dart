@@ -7,6 +7,7 @@ import 'package:aosa/presentation/widgets/otp_form.dart';
 import 'package:aosa/presentation/widgets/standard_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 enum AddOtpMode { form, scan, uri }
 
@@ -168,9 +169,5 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
     }
   }
 
-  String _generateId() {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final random = (now ^ (now << 13) ^ (now >> 17)).toRadixString(16);
-    return '$now-$random';
-  }
+  String _generateId() => const Uuid().v4();
 }

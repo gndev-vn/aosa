@@ -22,6 +22,7 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
   final _tokenController = TextEditingController();
   bool _useToken = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _generalError;
   String? _urlError;
   String? _usernameError;
@@ -33,6 +34,18 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
     super.initState();
     final serverUrl = ref.read(settingsProvider).serverUrl;
     _serverController.text = serverUrl;
+    // Pre-fill username and password from stored credentials
+    final auth = ref.read(authProvider.notifier);
+    auth.getUsername().then((username) {
+      if (username != null && username.isNotEmpty && mounted) {
+        _usernameController.text = username;
+      }
+    });
+    auth.getPassword().then((password) {
+      if (password != null && password.isNotEmpty && mounted) {
+        _passwordController.text = password;
+      }
+    });
   }
 
   @override
@@ -147,8 +160,18 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.lock_outline),
                 errorText: _passwordError,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
               ),
-              obscureText: true,
+              obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
               enabled: !_isLoading,
               onChanged: (_) => setState(() => _passwordError = null),

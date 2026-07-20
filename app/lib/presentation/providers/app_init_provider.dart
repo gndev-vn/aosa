@@ -80,6 +80,13 @@ class AppInitNotifier extends StateNotifier<AppServices?> {
       isInitialized: true,
     );
 
+    // Purge sync queue entries with invalid (non-UUID) record IDs
+    final purged = db.clearInvalidQueueEntries();
+    if (purged > 0) {
+      // ignore: avoid_print
+      print('[AppInit] Purged $purged invalid sync queue entries');
+    }
+
     final serverUrl = await _readStorage(storage, 'server_url');
     if (serverUrl != null && serverUrl.isNotEmpty) {
       configureSync(serverUrl);

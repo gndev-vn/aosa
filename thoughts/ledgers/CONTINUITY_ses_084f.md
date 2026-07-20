@@ -1,130 +1,85 @@
 ---
 session: ses_084f
-updated: 2026-07-19T16:16:16.670Z
+updated: 2026-07-20T06:53:05.025Z
 ---
 
 # Session Summary
 
 ## Goal
-Initialize persistent memory for the AOSA codebase and debug the Default repo loading error after cloud sync server connection.
+Refine the Edit OTP view in the AOSA Flutter authenticator app — improve layout, padding, margins, visual design, and simplify information shown to users.
 
 ## Constraints & Preferences
-- Follow RULES.txt as single source of truth (always read first)
-- Zero-confirmation policy after plan approval
-- Conventional Commits format
-- Read memory files (decisions.md, session-log.md, state-machine.md) at session start
-- Clean Architecture (domain/data/presentation) for Flutter; Domain/Application/Infrastructure/Api layers for backend
+- Flutter + Riverpod state management
+- `.editorconfig` enforced: 2-space indent, 80-char line width, double quotes, trailing commas
+- Project rules at `/Volumes/EXT_SSD/Projects/dotnet/aosa/RULES.txt`
+- No third-party animation packages beyond `flutter_animate` (already a dependency)
+- `uuid: ^3.0.7` (must stay below 4.x due to `system_tray` conflict)
+- Backend is .NET self-hosted (`http://10.0.2.2:5001/api/v1/`)
+- App uses encrypted sync with AES-GCM; encrypted_blob must be full JSON with ciphertext/nonce/salt/auth_tag
 
 ## Progress
 ### Done
-- [x] Initialized persistent memory with 18 project insights (architecture, tech stack, patterns, conventions)
-- [x] Configured VS Code LSP for Flutter (Dart 3.12.2, Flutter 3.44.6) and C# (.NET 10.0.302)
-- [x] Created `.vscode/settings.json` with Dart and C# LSP configurations
-- [x] Created `.vscode/extensions.json` with recommended extensions
-- [x] Fixed EF Core version conflict: aligned all packages to 10.0.10 (was 10.0.9 mixed with floating 10.*)
-- [x] Updated Microsoft.AspNetCore.Authentication.JwtBearer to 10.0.10
-- [x] Updated Microsoft.AspNetCore.OpenApi to 10.0.10
-- [x] Updated Scalar.AspNetCore to 2.16.15
-- [x] Verified backend builds clean (0 errors, 0 MSB3277 warnings)
-- [x] Added diagnostic logging to `repo_provider.dart` loadRepos() and _resolveActiveRepoId()
-- [x] Added diagnostic logging to `repo_api.dart` list() method
-- [x] Verified backend API works correctly via curl (signup returns token, repos endpoint returns 200 with correct data)
+- [x] **Cloud config sheet UX fixes**: Pre-fill server URL + username + password on reopen; password visibility toggle; dismissing sheet no longer toggles off sync; 401 no longer silently deletes tokens
+- [x] **Cloud sync improvements**: Removed "Sync now" button from settings; added sync icon button to home screen header (left side); renamed "Repo" → "Repositories"; added last sync timestamp to Server subtitle
+- [x] **FAB menu redesign**: Replaced liquid drip animation with simple circular buttons + flat background
+- [x] **Auth race condition fix**: Added `initializing` state to `AuthFlow` enum; `checkSession()` now called in `main()` after settings load; home screen skips error during `initializing` state
+- [x] **Password storage + pre-fill**: Password now stored in secure storage on login/signup; pre-filled when opening server config sheet; cleared on logout
+- [x] **Sync push GUID format fix**: Changed `_generateId()` in `add_otp_bottom_sheet.dart` and `_nextId()` in `otpauth_parser.dart` to use `Uuid().v4()` instead of timestamp-hex format
+- [x] **Sync queue migration**: Added `clearInvalidQueueEntries()` to `app_database.dart`; called on app init to purge non-GUID records from sync_queue
+- [x] **Sync push encrypted_blob fix**: `_pushChanges()` now sends full `EncryptedPayload` JSON (`ciphertext`, `nonce`, `salt`, `auth_tag`) instead of bare ciphertext; fixed both normal push and conflict resolution paths
+- [x] **SettingsProvider `lastSyncTime`**: Added `lastSyncTime` field to `AppSettings`, `setLastSyncTime()` to `SettingsNotifier`; `SyncNotifier.runSync()` records timestamp on success
 
 ### In Progress
-- [ ] Debugging Default repo loading error - diagnostic logs added but app not yet run to see actual error output
+- [ ] **Refine Edit OTP view**: User requested improved layout/design/margins/padding, less boring look, hide unnecessary technical info from users
 
 ### Blocked
-- Need to run Flutter app on device/emulator to see actual error in console logs (diagnostics added but not yet observed)
+- (none)
 
 ## Key Decisions
-- **EF Core pinned to 10.0.10**: Floating `10.*` on Design package caused transitive version conflict with pinned 10.0.9 Sqlite package
-- **Diagnostics before fix**: Per systematic-debugging skill, added logging to trace actual error before attempting any fix
-- **Root `.vscode/settings.json`**: Single config file for both Dart and C# LSP rather than separate per-directory configs
+- **`uuid: ^3.0.7` not ^4.x**: `system_tray ^2.0.0` depends on `uuid ^3.0.6`, creating a version conflict
+- **Store password in secure storage**: User explicitly requested password pre-fill; stored via `flutter_secure_storage` (encrypted at rest), cleared on logout
+- **`AuthFlow.initializing` state**: Prevents "Connection failed" snackbar flash on restart before `checkSession()` completes
+- **Full `EncryptedPayload` JSON in `encrypted_blob`**: Previously only ciphertext was sent; pull side needs nonce/salt/auth_tag for AES-GCM decryption — this was the root cause of OTPs not being retrieved after reinstall
+- **`clearInvalidQueueEntries()` on init**: One-time migration to purge sync_queue rows with non-GUID record_ids created before UUID fix
 
 ## Next Steps
-1. Run Flutter app on emulator/device, reproduce the bug by connecting to cloud sync server
-2. Observe console logs from the new `[RepoProvider]` and `[RepoApi]` diagnostic prints
-3. Identify the actual root cause from logs (could be: auth token timing, JSON parsing, state race condition, or Dio interceptor issue)
-4. Apply targeted fix once root cause is identified
-5. Remove diagnostic print statements after fix is confirmed
-6. Update bugfixes/log.md with the fix
+1. Redesign `edit_otp_screen.dart` — improve header layout, padding/margins, remove visual clutter
+2. Redesign `otp_form.dart` — simplify field labels, add user-friendly descriptions, hide technical fields (e.g., raw Base32 secret, algorithm/digits/period) behind expandable section or show only on add
+3. Improve the OTP actions bottom sheet in `home_screen.dart` — better layout for the code display, account details, and action buttons
+4. Consider making the add OTP flow and edit OTP flow share a cleaner, more polished form component
 
 ## Critical Context
-- Backend repo endpoints work correctly (verified via curl with fresh signup) - returns `[{id, owner_id, name, is_default, created_at, shared}]`
-- Error is swallowed in `repo_provider.dart:55` catch block: `state = state.copyWith(isLoading: false, error: 'Failed to load repos')` (now includes `$e` in error message)
-- The `auth_provider.dart` login() method at lines 48-55 also silently loads repos and sets active repo ID (catches errors with empty `catch (_)`)
-- Flow after connection: `CloudConfigSheet._onConnect()` → `authProvider.login()` → `appInitProvider.configureSync()` → sheet closes → `CloudSyncSection._loadReposAndSync()` → `repoProvider.loadRepos()`
-- **Potential race condition**: Auth token written to secure storage in `_persist()`, then immediately used by `AuthInterceptor` in `loadRepos()` - could be a timing issue
-- Server is running at `http://localhost:5001` with Docker compose config
-- Available devices: emulator-5554 (Android 16), macOS desktop, Chrome, physical iPhone
+- **Edit OTP screen** (`edit_otp_screen.dart`): 147 lines, `ConsumerWidget`, has header with gradient letter box, OTP code display card, OTPForm, Save/Delete buttons
+- **OTP Form** (`otp_form.dart`): 259 lines, `StatefulWidget`, has Issuer, Account Label, Secret Key (Base32) text fields + Algorithm/Digits/Period dropdowns + toggle switches — technical details users may not need
+- **OtpAccount entity** (`otp_account.dart`): has `id`, `issuer`, `accountLabel`, `secretBase32`, `algorithm` (default "SHA1"), `digits` (default6), `period` (default30), `counter`, `isFavourite`
+- The add OTP sheet (`add_otp_bottom_sheet.dart`) has a `showPasteUriDialog` for `otpauth://` URI parsing — user said it works well
+- Navigation: `ref.read(navigationProvider.notifier).goToEditOtp(repository, account)` → `AppScaffold` renders `EditOtpScreen`
 
 ## File Operations
 ### Read
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa` (root directory)
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/.editorconfig`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/RULES.txt`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/analysis_options.yaml`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/core`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api/api_client.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api/repo_api.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api/user_api.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/database`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/encryption`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/encryption/crypto_service.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/repositories`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain/entities`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain/entities/otp_account.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/app_init_provider.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/auth_provider.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/repo_provider.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/sync_provider.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/settings_sections/cloud_sync_section.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/settings_sheets/cloud_config_sheet.dart`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/pubspec.yaml`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Aosa.Api.csproj`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Endpoints`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Endpoints/AuthEndpoints.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Endpoints/EndpointHelpers.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Endpoints/RepoEndpoints.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Program.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Application`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Application/Aosa.Application.csproj`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Domain`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Domain/Aosa.Domain.csproj`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Domain/Entities`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Domain/Entities/OtpRecord.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Domain/Entities/Repo.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Infrastructure`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Infrastructure/Aosa.Infrastructure.csproj`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Infrastructure/Data`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Infrastructure/Data/AosaDbContext.cs`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Tests/Aosa.Tests.csproj`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.slnx`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/docker-compose.yml`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/bugfixes`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/bugfixes/log.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/changelog`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/changelog/decisions.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/docs/01-requirements.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/docs/02-architecture.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/memory`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/memory/decisions.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/memory/session-log.md`
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/memory/state-machine.md`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/edit_otp_screen.dart` — current edit OTP screen (147 lines)
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/widgets/otp_form.dart` — OTP form widget (259 lines)
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/home_screen.dart` — home screen with OTP card actions
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/widgets/aosa_widgets.dart` — shared widgets (AosaHeader, aosaBackButton, etc.)
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain/entities/otp_account.dart` — OtpAccount model
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/qr_scanner_screen.dart` — QR scanner
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/widgets/add_otp_bottom_sheet.dart` — add OTP bottom sheet (reference for good UX)
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/navigation_provider.dart` — navigation state
 
 ### Modified
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/.vscode/extensions.json` (created)
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/.vscode/settings.json` (created)
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api/repo_api.dart` (added diagnostic logging to list())
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/repo_provider.dart` (added diagnostic logging to loadRepos() and _resolveActiveRepoId(), updated error message to include exception details)
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Api/Aosa.Api.csproj` (pinned EF Core to 10.0.10, updated JwtBearer to 10.0.10, OpenApi to 10.0.10, Scalar to 2.16.15)
-- `/Volumes/EXT_SSD/Projects/dotnet/aosa/backend/Aosa.Infrastructure/Aosa.Infrastructure.csproj` (pinned EF Core.Sqlite to 10.0.10)
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/api/api_client.dart` — AuthInterceptor no longer deletes tokens on 401
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/database/app_database.dart` — added `clearInvalidQueueEntries()`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/data/services/sync_service.dart` — fixed encrypted_blob to send full JSON in both push and conflict paths
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain/entities/app_settings.dart` — added `lastSyncTime` field
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/domain/usecases/otpauth_parser.dart` — UUID v4 for `_nextId()`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/main.dart` — added `checkSession()` call after settings load
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/app_init_provider.dart` — calls `clearInvalidQueueEntries()` on init
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/auth_provider.dart` — added `initializing` state, password storage, `getPassword()`/`getUsername()`, `_persist()` stores username+password
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/settings_provider.dart` — added `setLastSyncTime()`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/providers/sync_provider.dart` — records `lastSyncTime` on successful sync
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/home_screen.dart` — sync button moved to left header, auth `== AuthFlow.unauthenticated` check, `_triggerSync()`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/settings_sections/cloud_sync_section.dart` — removed SyncActions, renamed Repo→Repositories, last sync subtitle, null/false disconnect fix
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/screens/settings_sheets/cloud_config_sheet.dart` — password pre-fill, visibility toggle
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/widgets/add_otp_bottom_sheet.dart` — UUID v4 for `_generateId()`
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/lib/presentation/widgets/fab_menu.dart` — rewritten to simple circles with flat background
+- `/Volumes/EXT_SSD/Projects/dotnet/aosa/app/pubspec.yaml` — added `uuid: ^3.0.7`

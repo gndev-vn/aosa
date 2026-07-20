@@ -5,17 +5,19 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-enum AuthFlow { unauthenticated, authenticating, authenticated }
+enum AuthFlow { initializing, unauthenticated, authenticating, authenticated }
 
 class AuthNotifier extends StateNotifier<AuthFlow> {
   final FlutterSecureStorage _storage;
 
-  AuthNotifier() : _storage = const FlutterSecureStorage(), super(AuthFlow.unauthenticated);
+  AuthNotifier() : _storage = const FlutterSecureStorage(), super(AuthFlow.initializing);
 
   Future<void> checkSession() async {
     final token = await _storage.read(key: _tokenKey);
     if (token != null && token.isNotEmpty) {
       state = AuthFlow.authenticated;
+    } else {
+      state = AuthFlow.unauthenticated;
     }
   }
 
@@ -25,7 +27,8 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       final api_ = UserApi(api.dio);
       final result = await api_.signup(username: username, password: password);
 
-      await _persist(result.userId, result.token, result.refreshToken);
+      await _persist(result.userId, result.token, result.refreshToken,
+          username: username, password: password);
       await _storage.write(key: _activeRepoKey, value: result.defaultRepoId);
 
       state = AuthFlow.authenticated;
@@ -42,7 +45,8 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
       final api_ = UserApi(api.dio);
       final result = await api_.login(username: username, password: password);
 
-      await _persist(result.userId, result.token, result.refreshToken);
+      await _persist(result.userId, result.token, result.refreshToken,
+          username: username, password: password);
       state = AuthFlow.authenticated;
 
       try {
@@ -95,16 +99,27 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
     await _storage.delete(key: _refreshKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _activeRepoKey);
+    await _storage.delete(key: _usernameKey);
+    await _storage.delete(key: _passwordKey);
     state = AuthFlow.unauthenticated;
   }
 
   Future<String?> getToken() => _storage.read(key: _tokenKey);
   Future<String?> getUserId() => _storage.read(key: _userIdKey);
+  Future<String?> getUsername() => _storage.read(key: _usernameKey);
+  Future<String?> getPassword() => _storage.read(key: _passwordKey);
 
-  Future<void> _persist(String userId, String token, String refresh) async {
+  Future<void> _persist(String userId, String token, String refresh,
+      {String? username, String? password}) async {
     await _storage.write(key: _tokenKey, value: token);
     await _storage.write(key: _refreshKey, value: refresh);
     await _storage.write(key: _userIdKey, value: userId);
+    if (username != null && username.isNotEmpty) {
+      await _storage.write(key: _usernameKey, value: username);
+    }
+    if (password != null && password.isNotEmpty) {
+      await _storage.write(key: _passwordKey, value: password);
+    }
   }
 
   static String _humanizeError(Object e) {
@@ -130,6 +145,8 @@ class AuthNotifier extends StateNotifier<AuthFlow> {
   static const _userIdKey = 'aosa_user_id';
   static const _activeRepoKey = 'aosa_active_repo_id';
   static const _serverUrlKey = 'aosa_server_url';
+  static const _usernameKey = 'aosa_username';
+  static const _passwordKey = 'aosa_user_password';
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthFlow>(

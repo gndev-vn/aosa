@@ -39,6 +39,8 @@ class SyncNotifier extends StateNotifier<SyncState> {
         state = SyncState.error;
         return error;
       }
+      // Store the last sync time
+      ref.read(settingsProvider.notifier).setLastSyncTime(DateTime.now());
       state = SyncState.success;
       return null;
     } catch (e) {

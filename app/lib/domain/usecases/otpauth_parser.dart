@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:aosa/domain/entities/otp_account.dart';
+import 'package:uuid/uuid.dart';
 
 class OtpAuthResult {
   final String issuer;
@@ -146,8 +147,5 @@ class OtpAuthParser {
     return ('', label);
   }
 
-  static String _nextId(int counter) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return '${now.toRadixString(16)}-${counter.toRadixString(16)}';
-  }
+  static String _nextId(int counter) => const Uuid().v4();
 }

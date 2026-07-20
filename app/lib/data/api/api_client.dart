@@ -51,10 +51,10 @@ class AuthInterceptor extends Interceptor {
 
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
-      await _storage.delete(key: userTokenKey);
-      await _storage.delete(key: userRefreshKey);
-    }
+    // Pass 401 through without deleting tokens — the caller handles
+    // credential expiry (shows error, lets user reconnect manually).
+    // Previously we deleted tokens here, which caused the UI to silently
+    // lose the "Connected" state after a JWT expired.
     handler.next(err);
   }
 

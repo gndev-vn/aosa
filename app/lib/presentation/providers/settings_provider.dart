@@ -85,6 +85,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _persist();
   }
 
+  void setLastSyncTime(DateTime time) {
+    state = state.copyWith(lastSyncTime: time);
+    _persist();
+  }
+
   static const _storageKey = 'app_settings';
   static const _serverUrlKey = 'server_url';
 }

@@ -32,9 +32,16 @@ class SyncService {
 
     final changes = <PushChange>[];
     for (final item in queued) {
+      // Reconstruct full EncryptedPayload JSON so pull side can decrypt
+      final encryptedPayload = jsonEncode({
+        'ciphertext': item['encrypted_data'],
+        'nonce': item['nonce'],
+        'salt': item['salt'],
+        'auth_tag': item['auth_tag'],
+      });
       changes.add(PushChange(
         id: item['record_id'] as String,
-        encryptedBlob: item['encrypted_data'] as String,
+        encryptedBlob: encryptedPayload,
         expectedVersion: item['expected_version'] as int,
         clientTimestamp: DateTime.parse(item['created_at'] as String),
       ),);
@@ -71,9 +78,15 @@ class SyncService {
 
         // LWW: if local is newer, re-push with updated expected version
         if (localTimestamp.isAfter(serverRecord.updatedAt)) {
+          final retryEncryptedPayload = jsonEncode({
+            'ciphertext': localItem['encrypted_data'],
+            'nonce': localItem['nonce'],
+            'salt': localItem['salt'],
+            'auth_tag': localItem['auth_tag'],
+          });
           final retryChanges = [PushChange(
             id: conflict.id,
-            encryptedBlob: localItem['encrypted_data'] as String,
+            encryptedBlob: retryEncryptedPayload,
             expectedVersion: serverRecord.version,
             clientTimestamp: localTimestamp,
           )];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const _radiusSm = 12.0;
@@ -8,7 +9,7 @@ class AppTheme {
   static ThemeData light({required Color seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
-      surface: const Color(0xFFF8F6F3),
+      surface: Colors.white,
     );
     return _buildTheme(colorScheme, Brightness.light);
   }
@@ -20,6 +21,20 @@ class AppTheme {
       surface: const Color(0xFF1A1C1E),
     );
     return _buildTheme(colorScheme, Brightness.dark);
+  }
+
+  static TextStyle _inter({
+    double fontSize = 14,
+    FontWeight fontWeight = FontWeight.w400,
+    double? letterSpacing,
+    Color? color,
+  }) {
+    return GoogleFonts.inter(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      letterSpacing: letterSpacing,
+      color: color,
+    );
   }
 
   static ThemeData _buildTheme(ColorScheme colorScheme, Brightness brightness) {
@@ -36,75 +51,75 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
-        titleTextStyle: TextStyle(
+        titleTextStyle: _inter(
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: colorScheme.onSurface,
           letterSpacing: -0.3,
+          color: colorScheme.onSurface,
         ),
       ),
 
       textTheme: TextTheme(
-        headlineLarge: TextStyle(
+        headlineLarge: _inter(
           fontSize: 28,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.5,
           color: colorScheme.onSurface,
         ),
-        headlineMedium: TextStyle(
+        headlineMedium: _inter(
           fontSize: 24,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.3,
           color: colorScheme.onSurface,
         ),
-        headlineSmall: TextStyle(
+        headlineSmall: _inter(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        titleLarge: TextStyle(
+        titleLarge: _inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        titleMedium: TextStyle(
+        titleMedium: _inter(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurface,
         ),
-        titleSmall: TextStyle(
+        titleSmall: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        bodyLarge: TextStyle(
+        bodyLarge: _inter(
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurface,
         ),
-        bodyMedium: TextStyle(
+        bodyMedium: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurface,
         ),
-        bodySmall: TextStyle(
+        bodySmall: _inter(
           fontSize: 12,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant,
         ),
-        labelLarge: TextStyle(
+        labelLarge: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
           color: colorScheme.onSurface,
         ),
-        labelMedium: TextStyle(
+        labelMedium: _inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
           color: colorScheme.onSurfaceVariant,
         ),
-        labelSmall: TextStyle(
+        labelSmall: _inter(
           fontSize: 10,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
@@ -135,12 +150,12 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         prefixIconColor: colorScheme.onSurfaceVariant,
-        labelStyle: TextStyle(
+        labelStyle: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurfaceVariant,
         ),
-        hintStyle: TextStyle(
+        hintStyle: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant.withAlpha(120),
@@ -160,9 +175,8 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(_radiusLg)),
         ),
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF1A1C1E) : const Color(0xFFF8F6F3),
-        modalBackgroundColor:
-            isDark ? const Color(0xFF1A1C1E) : const Color(0xFFF8F6F3),
+        backgroundColor: isDark ? const Color(0xFF1A1C1E) : Colors.white,
+        modalBackgroundColor: isDark ? const Color(0xFF1A1C1E) : Colors.white,
         dragHandleColor: colorScheme.onSurfaceVariant.withAlpha(80),
         dragHandleSize: const Size(36, 4),
       ),
@@ -174,7 +188,7 @@ class AppTheme {
         ),
         elevation: 2,
         backgroundColor: isDark ? const Color(0xFF2C2F33) : const Color(0xFF1F1F1F),
-        contentTextStyle: const TextStyle(
+        contentTextStyle: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: Colors.white,

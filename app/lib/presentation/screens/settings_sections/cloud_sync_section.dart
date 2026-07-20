@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../domain/entities/app_settings.dart';
 import '../../providers/settings_provider.dart';
@@ -22,7 +23,6 @@ class CloudSyncSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final authFlow = ref.watch(authProvider);
-    final syncState = ref.watch(syncProvider);
     final isConnected = authFlow == AuthFlow.authenticated;
     final reposState = ref.watch(repoProvider);
 
@@ -81,11 +81,7 @@ class CloudSyncSection extends ConsumerWidget {
                     color: colorScheme.secondaryContainer,
                   ),
                   title: 'Server',
-                  subtitle: isConnected
-                      ? 'Connected'
-                      : (settings.serverUrl.isEmpty
-                          ? 'Not configured'
-                          : settings.serverUrl),
+                  subtitle: _serverSubtitle(settings, isConnected),
                   trailing: Icon(Icons.chevron_right,
                       size: 18, color: colorScheme.onSurfaceVariant),
                   onTap: () => _showCloudConfigSheet(context, ref),
@@ -94,16 +90,11 @@ class CloudSyncSection extends ConsumerWidget {
                   const ThinDivider(),
                   SettingsRow(
                     leading: const IconBox(icon: Icons.folder_outlined),
-                    title: 'Repo',
+                    title: 'Repositories',
                     subtitle: _activeRepoName(reposState),
                     trailing: Icon(Icons.chevron_right,
                         size: 18, color: colorScheme.onSurfaceVariant),
                     onTap: () => _showRepoManager(context),
-                  ),
-                  const ThinDivider(),
-                  _SyncActions(
-                    syncState: syncState,
-                    onSync: () => _triggerSync(context, ref),
                   ),
                 ],
               ],
@@ -112,6 +103,18 @@ class CloudSyncSection extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  String _serverSubtitle(AppSettings settings, bool isConnected) {
+    if (!isConnected) {
+      return settings.serverUrl.isEmpty
+          ? 'Not configured'
+          : settings.serverUrl;
+    }
+    final lastSync = settings.lastSyncTime;
+    if (lastSync == null) return 'Connected';
+    final formatted = DateFormat('MMM d, h:mm a').format(lastSync);
+    return 'Connected · Last sync: $formatted';
   }
 
   String _activeRepoName(RepoState reposState) {
@@ -135,92 +138,31 @@ class CloudSyncSection extends ConsumerWidget {
     if (connected == true) {
       ref.read(settingsProvider.notifier).toggleSync(true);
       await _loadReposAndSync(context, ref);
-    } else {
+    } else if (connected == false) {
+      // Only toggle off if user explicitly disconnected (not just dismissed sheet)
       ref.read(settingsProvider.notifier).toggleSync(false);
     }
+    // connected == null (dismissed) → do nothing
   }
 
   Future<void> _loadReposAndSync(BuildContext context, WidgetRef ref) async {
     final services = ref.read(appInitProvider);
     if (services == null) return;
     await ref.read(repoProvider.notifier).loadRepos(services.apiClient);
-    if (context.mounted) await _triggerSync(context, ref);
+    if (context.mounted) {
+      final error = await ref.read(syncProvider.notifier).runSync(ref);
+      if (error != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
   }
 
   void _showRepoManager(BuildContext context) {
     showSlideBottomSheet<void>(
       context,
       builder: (_) => const RepoManagerSheet(),
-    );
-  }
-
-  Future<void> _triggerSync(BuildContext context, WidgetRef ref) async {
-    final error = await ref.read(syncProvider.notifier).runSync(ref);
-    if (error != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-}
-
-class _SyncActions extends StatelessWidget {
-  final SyncState syncState;
-  final VoidCallback onSync;
-
-  const _SyncActions({required this.syncState, required this.onSync});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: AosaButton(
-                  onPressed: syncState == SyncState.syncing ? null : onSync,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        syncState == SyncState.syncing
-                            ? Icons.hourglass_top
-                            : Icons.sync_rounded,
-                        size: 18,
-                        color: cs.onPrimary.withAlpha(160),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        syncState == SyncState.syncing
-                            ? 'Syncing…'
-                            : 'Sync now',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (syncState == SyncState.success)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text('Sync completed',
-                  style: TextStyle(fontSize: 13, color: cs.primary)),
-            ),
-          if (syncState == SyncState.error)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text('Sync failed',
-                  style: TextStyle(fontSize: 13, color: cs.error)),
-            ),
-        ],
-      ),
     );
   }
 }

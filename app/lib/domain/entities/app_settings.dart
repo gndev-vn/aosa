@@ -13,6 +13,7 @@ class AppSettings {
   final String deviceName;
   final String globalHotkey;
   final bool minimizeToTray;
+  final DateTime? lastSyncTime;
 
   const AppSettings({
     this.themeMode = AppThemeMode.system,
@@ -25,6 +26,7 @@ class AppSettings {
     this.deviceName = '',
     this.globalHotkey = '',
     this.minimizeToTray = false,
+    this.lastSyncTime,
   });
 
   AppSettings copyWith({
@@ -38,6 +40,8 @@ class AppSettings {
     String? deviceName,
     String? globalHotkey,
     bool? minimizeToTray,
+    DateTime? lastSyncTime,
+    bool clearLastSyncTime = false,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -50,6 +54,7 @@ class AppSettings {
       deviceName: deviceName ?? this.deviceName,
       globalHotkey: globalHotkey ?? this.globalHotkey,
       minimizeToTray: minimizeToTray ?? this.minimizeToTray,
+      lastSyncTime: clearLastSyncTime ? null : (lastSyncTime ?? this.lastSyncTime),
     );
   }
 
@@ -64,6 +69,7 @@ class AppSettings {
         'device_name': deviceName,
         'global_hotkey': globalHotkey,
         'minimize_to_tray': minimizeToTray,
+        'last_sync_time': lastSyncTime?.toIso8601String(),
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -83,5 +89,8 @@ class AppSettings {
         deviceName: json['device_name'] as String? ?? '',
         globalHotkey: json['global_hotkey'] as String? ?? '',
         minimizeToTray: json['minimize_to_tray'] as bool? ?? false,
+        lastSyncTime: json['last_sync_time'] != null
+            ? DateTime.tryParse(json['last_sync_time'] as String)
+            : null,
       );
 }
