@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aosa/domain/usecases/totp_engine.dart';
@@ -5,14 +7,20 @@ import 'package:aosa/domain/usecases/totp_engine.dart';
 void main() {
   group('Base32 Decoding', () {
     test('decodes standard Base32', () {
-      // "Hello!" = "JBSWY3DPEBLW64T"
-      final result = TotpEngine.decodeBase32('JBSWY3DPEBLW64T');
+      // "Hello!" = "JBSWY3DPEE======" (RFC 4648)
+      final result = TotpEngine.decodeBase32('JBSWY3DPEE======');
       expect(result, [72, 101, 108, 108, 111, 33]);
     });
 
     test('decodes with lowercase input', () {
-      final result = TotpEngine.decodeBase32('jbswy3dpeblw64t');
+      final result = TotpEngine.decodeBase32('jbswy3dpee======');
       expect(result, [72, 101, 108, 108, 111, 33]);
+    });
+
+    test('decodes standard Base32 sentence', () {
+      // "Hello World" = "JBSWY3DPEBLW64TMMQ======"
+      final result = TotpEngine.decodeBase32('JBSWY3DPEBLW64TMMQ======');
+      expect(result, [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]);
     });
 
     test('decodes with padding', () {
@@ -25,12 +33,30 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('isValidBase32 returns true for valid input', () {
-      expect(TotpEngine.isValidBase32('JBSWY3DPEBLW64T'), isTrue);
+    test('decodes with internal spaces and hyphens', () {
+      final expected = [72, 101, 108, 108, 111, 33];
+      expect(TotpEngine.decodeBase32('JBSW Y3DP EE======'), expected);
+      expect(TotpEngine.decodeBase32('JBSW-Y3DP-EE======'), expected);
+      expect(TotpEngine.decodeBase32('JBSW_Y3DP_EE======'), expected);
+      expect(TotpEngine.decodeBase32('  jbsw-y3dp ee======  '), expected);
     });
 
-    test('isValidBase32 returns false for empty', () {
+    test('decodes without padding (missing padding)', () {
+      final expected = [72, 101, 108, 108, 111, 33];
+      expect(TotpEngine.decodeBase32('JBSWY3DPEE'), expected);
+      expect(TotpEngine.decodeBase32('jbswy3dpee'), expected);
+    });
+
+    test('isValidBase32 returns true for valid input', () {
+      expect(TotpEngine.isValidBase32('JBSWY3DPEE======'), isTrue);
+      expect(TotpEngine.isValidBase32('JBSW-Y3DP-EE'), isTrue);
+      expect(TotpEngine.isValidBase32('jbsw y3dp ee'), isTrue);
+    });
+
+    test('isValidBase32 returns false for empty or short input', () {
       expect(TotpEngine.isValidBase32(''), isFalse);
+      expect(TotpEngine.isValidBase32('   ---   '), isFalse);
+      expect(TotpEngine.isValidBase32('ABC'), isFalse);
     });
 
     test('isValidBase32 returns false for invalid chars', () {
@@ -87,12 +113,12 @@ void main() {
 
     test('counter 0 with 8 digits', () async {
       final result = await TotpEngine.generateHotp(secret, 0, digits: 8);
-      expect(result, '4755224'.padLeft(8, '0'));
+      expect(result, '84755224');
     });
 
     test('counter 1 with 8 digits', () async {
       final result = await TotpEngine.generateHotp(secret, 1, digits: 8);
-      expect(result, '8287082'.padLeft(8, '0'));
+      expect(result, '94287082');
     });
   });
 
@@ -217,6 +243,110 @@ void main() {
       expect(TotpEngine.intToBytes(0x1234567890), [
         0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x90,
       ]);
+    });
+  });
+
+  group('RFC 6238 Reference Vectors (Appendix B)', () {
+    final sha1Secret = ascii.encode('12345678901234567890');
+    final sha256Secret = ascii.encode('12345678901234567890123456789012');
+    final sha512Secret = ascii.encode(
+      '1234567890123456789012345678901234567890123456789012345678901234',
+    );
+
+    test('SHA1 test vectors match RFC 6238 Appendix B', () async {
+      final vectors = [
+        (59 ~/ 30, '94287082'),
+        (1111111109 ~/ 30, '07081804'),
+        (1111111111 ~/ 30, '14050471'),
+        (1234567890 ~/ 30, '89005924'),
+        (2000000000 ~/ 30, '69279037'),
+        (20000000000 ~/ 30, '65353130'),
+      ];
+
+      for (final (counter, expected) in vectors) {
+        final code = await TotpEngine.generateHotpRaw(
+          sha1Secret,
+          counter,
+          digits: 8,
+          algorithm: 'SHA1',
+        );
+        expect(code, expected, reason: 'Failed for counter $counter');
+      }
+    });
+
+    test('SHA256 test vectors match RFC 6238 Appendix B', () async {
+      final vectors = [
+        (59 ~/ 30, '46119246'),
+        (1111111109 ~/ 30, '68084774'),
+        (1111111111 ~/ 30, '67062674'),
+        (1234567890 ~/ 30, '91819424'),
+        (2000000000 ~/ 30, '90698825'),
+        (20000000000 ~/ 30, '77737706'),
+      ];
+
+      for (final (counter, expected) in vectors) {
+        final code = await TotpEngine.generateHotpRaw(
+          sha256Secret,
+          counter,
+          digits: 8,
+          algorithm: 'SHA256',
+        );
+        expect(code, expected, reason: 'Failed for counter $counter');
+      }
+    });
+
+    test('SHA512 test vectors match RFC 6238 Appendix B', () async {
+      final vectors = [
+        (59 ~/ 30, '90693936'),
+        (1111111109 ~/ 30, '25091201'),
+        (1111111111 ~/ 30, '99943326'),
+        (1234567890 ~/ 30, '93441116'),
+        (2000000000 ~/ 30, '38618901'),
+        (20000000000 ~/ 30, '47863826'),
+      ];
+
+      for (final (counter, expected) in vectors) {
+        final code = await TotpEngine.generateHotpRaw(
+          sha512Secret,
+          counter,
+          digits: 8,
+          algorithm: 'SHA512',
+        );
+        expect(code, expected, reason: 'Failed for counter $counter');
+      }
+    });
+
+    test('generateCode with Base32 secret generates exact RFC 6238 code', () async {
+      // Base32 for '12345678901234567890' is 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
+      const engine = TotpEngine(digits: 8, algorithm: 'SHA1');
+      final code = await engine.generateCode(
+        'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(59 * 1000),
+      );
+      expect(code, '94287082');
+    });
+
+    test('generateCode handles secrets with spaces, hyphens, and lowercase', () async {
+      const engine = TotpEngine(digits: 8, algorithm: 'SHA1');
+      final code = await engine.generateCode(
+        '  gezd-gnbv-gy3t-qojq  gezd-gnbv-gy3t-qojq  ',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(59 * 1000),
+      );
+      expect(code, '94287082');
+    });
+
+    test('varying periods (10s, 60s, 300s) calculate time and step correctly', () async {
+      for (final period in [10, 30, 60, 120, 300]) {
+        final engine = TotpEngine(period: period);
+        expect(engine.timeLeft, greaterThan(0));
+        expect(engine.timeLeft, lessThanOrEqualTo(period));
+
+        final code = await engine.generateCode(
+          'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(100000),
+        );
+        expect(code.length, 6);
+      }
     });
   });
 }

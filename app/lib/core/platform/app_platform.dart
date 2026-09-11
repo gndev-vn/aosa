@@ -17,6 +17,11 @@ class AppPlatformUtil {
 
   static bool get isAndroid => current == AppPlatform.android;
   static bool get isIOS => current == AppPlatform.ios;
+  static bool get isLinux => current == AppPlatform.linux;
+  static bool get isMacOS => current == AppPlatform.macOS;
+  static bool get isWindows => current == AppPlatform.windows;
+  static bool get isMobile => isAndroid || isIOS;
+  static bool get isDesktop => isMacOS || isWindows || isLinux;
 
   static int get androidApiLevel {
     if (!isAndroid) return 0;

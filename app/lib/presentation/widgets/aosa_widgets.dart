@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+
 class AosaHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final Widget? titleWidget;
@@ -142,13 +144,13 @@ class AosaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = cs.brightness == Brightness.dark;
-    final radius = borderRadius ?? 16.0;
+    final radius = borderRadius ?? AppTheme.radiusSm;
 
     final container = Container(
       margin: margin ?? const EdgeInsets.symmetric(vertical: 6),
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color ?? (isDark ? const Color(0xFF232528) : cs.surface),
+        color: color ?? (isDark ? AppTheme.darkCardSurface : AppTheme.lightCardSurface),
         borderRadius: BorderRadius.circular(radius),
         border: border ??
             Border.all(
@@ -240,7 +242,7 @@ class AosaButton extends StatelessWidget {
     this.height = 52,
     this.backgroundColor,
     this.foregroundColor,
-    this.borderRadius = 24,
+    this.borderRadius = AppTheme.radiusPill,
     this.enabled = true,
   });
 

@@ -46,16 +46,28 @@ class OtpAuthParser {
       final labelParts = _splitLabel(label);
 
       final params = parsed.queryParameters;
-      final secret = params['secret'] ?? '';
+      final rawSecret = params['secret'] ?? '';
+      final secret = rawSecret.replaceAll(RegExp(r'[\s\-_]'), '');
       if (secret.isEmpty) return null;
 
-      final algorithm = (params['algorithm'] ?? 'SHA1').toUpperCase();
-      final digits = int.tryParse(params['digits'] ?? '') ?? 6;
-      final period = int.tryParse(params['period'] ?? '') ?? 30;
+      final rawAlgo = (params['algorithm'] ?? 'SHA1').toUpperCase().replaceAll('-', '');
+      final algorithm = switch (rawAlgo) {
+        'SHA256' => 'SHA256',
+        'SHA512' => 'SHA512',
+        _ => 'SHA1',
+      };
+
+      final parsedDigits = int.tryParse(params['digits'] ?? '');
+      final digits = (parsedDigits == 8) ? 8 : 6;
+
+      final parsedPeriod = int.tryParse(params['period'] ?? '');
+      final period = (parsedPeriod != null && parsedPeriod > 0) ? parsedPeriod : 30;
       final counterValue = int.tryParse(params['counter'] ?? '');
 
-      final issuerParam = params['issuer'];
-      final resolvedIssuer = issuerParam ?? labelParts.$1;
+      final issuerParam = params['issuer']?.trim();
+      final resolvedIssuer = (issuerParam != null && issuerParam.isNotEmpty)
+          ? issuerParam
+          : labelParts.$1;
       final resolvedLabel = labelParts.$2;
 
       return OtpAuthResult(
@@ -140,11 +152,11 @@ class OtpAuthParser {
     final colonIndex = label.indexOf(':');
     if (colonIndex > 0 && colonIndex < label.length - 1) {
       return (
-        label.substring(0, colonIndex),
-        label.substring(colonIndex + 1),
+        label.substring(0, colonIndex).trim(),
+        label.substring(colonIndex + 1).trim(),
       );
     }
-    return ('', label);
+    return ('', label.trim());
   }
 
   static String _nextId(int counter) => const Uuid().v4();

@@ -49,6 +49,7 @@ class SecuritySection extends ConsumerWidget {
                   leading: const IconBox(icon: Icons.timer_outlined),
                   title: 'Auto-lock timeout',
                   trailing: SettingsSelector(
+                    title: 'Auto-lock timeout',
                     value: settings.autoLockTimeout.name,
                     options: const [
                       ('Immediate', 'immediate'),

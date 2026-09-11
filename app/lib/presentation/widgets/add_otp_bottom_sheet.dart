@@ -2,7 +2,6 @@ import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/domain/usecases/otpauth_parser.dart';
 import 'package:aosa/presentation/screens/qr_scanner_screen.dart';
-import 'package:aosa/presentation/widgets/aosa_confirm_dialog.dart';
 import 'package:aosa/presentation/widgets/otp_form.dart';
 import 'package:aosa/presentation/widgets/standard_bottom_sheet.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +62,7 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
     return StandardBottomSheet(
       title: 'Add account',
       useSafeArea: false,
+      isScrollControlled: true,
       confirmLabel: 'Save',
       onConfirm: _formValid ? () => _otpFormKey.currentState?.save() : null,
       child: OtpForm(
@@ -112,24 +112,29 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
   void _showPasteUriDialog() {
     final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AosaConfirmDialog(
-        icon: Icons.link_rounded,
+    showSlideBottomSheet<void>(
+      context,
+      isScrollControlled: true,
+      builder: (ctx) => StandardBottomSheet(
         title: 'Paste URI',
         confirmLabel: 'Import',
-        child: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'otpauth://totp/...',
-          ),
-          maxLines: 3,
-          autofocus: true,
-        ),
+        onBack: () => Navigator.of(ctx).pop(),
         onConfirm: () {
           final uri = controller.text.trim();
+          Navigator.of(ctx).pop();
           if (uri.isNotEmpty) _handleScanResult(uri);
         },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'otpauth://totp/...',
+            ),
+            maxLines: 3,
+            autofocus: true,
+          ),
+        ),
       ),
     );
   }

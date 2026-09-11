@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../presentation/providers/otp_list_provider.dart';
+import '../../presentation/providers/totp_ticker_provider.dart';
 
 class OtpCard extends StatefulWidget {
   final OtpCodeWithAccount item;
@@ -24,23 +28,50 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   bool _isPressed = false;
+  bool _copied = false;
+  Timer? _copiedTimer;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 300),
     );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
 
   @override
   void dispose() {
+    _copiedTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _copyCode(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: widget.item.code.code));
+    HapticFeedback.lightImpact();
+
+    _copiedTimer?.cancel();
+    if (mounted) {
+      setState(() => _copied = true);
+      _copiedTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (mounted) setState(() => _copied = false);
+      });
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Copied to clipboard'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -57,7 +88,6 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
   Widget _buildFullCard(BuildContext context, ColorScheme colorScheme) {
     final account = widget.item.account;
     final code = widget.item.code;
-    final isUrgent = code.timeLeft <= 5;
     final isDark = colorScheme.brightness == Brightness.dark;
 
     return AnimatedBuilder(
@@ -79,7 +109,6 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
         onTapUp: (_) {
           setState(() => _isPressed = false);
           _pulseController.reverse();
-          HapticFeedback.lightImpact();
         },
         onTapCancel: () {
           setState(() => _isPressed = false);
@@ -88,8 +117,14 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF232528) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: isDark ? AppTheme.darkCardSurface : AppTheme.lightCardSurface,
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+            border: Border.all(
+              color: _copied
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant.withAlpha(50),
+              width: _copied ? 1.5 : 1.0,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -104,13 +139,45 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            account.issuer,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  account.issuer,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_copied) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check, size: 12, color: colorScheme.onPrimaryContainer),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        'Copied',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: colorScheme.onPrimaryContainer,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             account.accountLabel,
@@ -128,10 +195,7 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
@@ -146,64 +210,21 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
                           ),
                         ),
                       ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isUrgent
-                            ? colorScheme.error.withAlpha(30)
-                            : colorScheme.primary.withAlpha(20),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${code.timeLeft}s',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: isUrgent
-                              ? colorScheme.error
-                              : colorScheme.primary,
-                        ),
-                      ),
+                    _OtpCountdownBadge(
+                      period: account.period,
+                      fallbackTimeLeft: code.timeLeft,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
                   _formatCode(code.code),
-                  style: GoogleFonts.poppins(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 5,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: AppTheme.codeStyle(color: colorScheme.onSurface),
                 ),
-                const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => Stack(
-                      children: [
-                        Container(
-                          height: 4,
-                          color: colorScheme.surfaceContainerHighest,
-                        ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 4,
-                          width: constraints.maxWidth * code.progress,
-                          decoration: BoxDecoration(
-                            color: isUrgent
-                                ? colorScheme.error
-                                : colorScheme.primary,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                const SizedBox(height: 12),
+                _OtpProgressBar(
+                  period: account.period,
+                  fallbackTimeLeft: code.timeLeft,
                 ),
               ],
             ),
@@ -213,7 +234,45 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
     );
   }
 
+  Widget _buildCompactCard(BuildContext context, ColorScheme colorScheme) {
+    final account = widget.item.account;
+    final code = widget.item.code;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCardSurface : AppTheme.lightCardSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      ),
+      child: ListTile(
+        onTap: () => _copyCode(context),
+        onLongPress: widget.onEdit,
+        leading: _buildAvatar(colorScheme, account.issuer),
+        title: Text(
+          account.issuer,
+          style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+        ),
+        subtitle: Text(
+          _formatCode(code.code),
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w700,
+            color: colorScheme.primary,
+            letterSpacing: 1.5,
+          ),
+        ),
+        trailing: _OtpCountdownBadge(
+          period: account.period,
+          fallbackTimeLeft: code.timeLeft,
+          isCompact: true,
+        ),
+      ),
+    );
+  }
+
   Widget _buildAvatar(ColorScheme colorScheme, String issuer) {
+    final char = issuer.isNotEmpty ? issuer[0].toUpperCase() : '?';
     return Container(
       width: 42,
       height: 42,
@@ -230,7 +289,7 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
       ),
       child: Center(
         child: Text(
-          issuer[0].toUpperCase(),
+          char,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -241,83 +300,104 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildCompactCard(BuildContext context, ColorScheme colorScheme) {
-    final account = widget.item.account;
-    final code = widget.item.code;
-    final isDark = colorScheme.brightness == Brightness.dark;
+  String _formatCode(String code) {
+    if (code.length <= 3) return code;
+    return '${code.substring(0, 3)} ${code.substring(3)}';
+  }
+}
 
-    return GestureDetector(
-      onTap: () => _copyCode(context),
-      onLongPress: widget.onEdit,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF232528) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+class _OtpCountdownBadge extends ConsumerWidget {
+  final int period;
+  final int fallbackTimeLeft;
+  final bool isCompact;
+
+  const _OtpCountdownBadge({
+    required this.period,
+    required this.fallbackTimeLeft,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tickerAsync = ref.watch(totpTickerProvider);
+    final currentSecond = tickerAsync.valueOrNull ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final timeLeft = calculateTimeLeft(period, currentSecond);
+    final progress = calculateProgressFraction(period, currentSecond);
+    final isUrgent = timeLeft <= 5;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (isCompact) {
+      return SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          value: progress,
+          strokeWidth: 2.5,
+          color: isUrgent ? colorScheme.error : colorScheme.primary,
+          backgroundColor: colorScheme.surfaceContainerHighest,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildAvatar(colorScheme, account.issuer),
-              const SizedBox(height: 8),
-              Text(
-                account.issuer,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _formatCode(code.code),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 3,
-                  fontFamily: 'monospace',
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: code.progress,
-                  minHeight: 2,
-                  color: code.timeLeft <= 5
-                      ? colorScheme.error
-                      : colorScheme.primary,
-                  backgroundColor: colorScheme.surfaceContainerHighest,
-                ),
-              ),
-            ],
-          ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isUrgent
+            ? colorScheme.error.withAlpha(30)
+            : colorScheme.primary.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '${timeLeft}s',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: isUrgent ? colorScheme.error : colorScheme.primary,
         ),
       ),
     );
   }
+}
 
-  void _copyCode(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: widget.item.code.code));
-    HapticFeedback.heavyImpact();
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Copied to clipboard'),
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
+class _OtpProgressBar extends ConsumerWidget {
+  final int period;
+  final int fallbackTimeLeft;
+
+  const _OtpProgressBar({
+    required this.period,
+    required this.fallbackTimeLeft,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tickerAsync = ref.watch(totpTickerProvider);
+    final currentSecond = tickerAsync.valueOrNull ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final timeLeft = calculateTimeLeft(period, currentSecond);
+    final progress = calculateProgressFraction(period, currentSecond);
+    final isUrgent = timeLeft <= 5;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          children: [
+            Container(
+              height: 4,
+              color: colorScheme.surfaceContainerHighest,
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              height: 4,
+              width: constraints.maxWidth * progress,
+              decoration: BoxDecoration(
+                color: isUrgent ? colorScheme.error : colorScheme.primary,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ],
         ),
-      );
-    }
-  }
-
-  String _formatCode(String code) {
-    if (code.length <= 3) return code;
-    return '${code.substring(0, 3)} ${code.substring(3)}';
+      ),
+    );
   }
 }

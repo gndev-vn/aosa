@@ -193,6 +193,7 @@ void main() {
 
       db.addToQueue({
         'record_id': 'sync-1',
+        'repo_id': 'repo-default',
         'action': 'create',
         'encrypted_data': 'data1',
         'nonce': 'n1',

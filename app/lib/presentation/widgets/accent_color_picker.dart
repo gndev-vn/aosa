@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../presentation/providers/settings_provider.dart';
+import 'standard_bottom_sheet.dart';
 
 class AccentColorPicker extends ConsumerWidget {
   const AccentColorPicker({super.key});
@@ -12,38 +13,15 @@ class AccentColorPicker extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: colorScheme.surface,
+    return StandardBottomSheet(
+      title: 'Accent Color',
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.colorize_rounded, size: 18, color: colorScheme.onPrimaryContainer),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Accent Color',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colorScheme.onSurface),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 14,
-              runSpacing: 14,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            alignment: WrapAlignment.center,
               children: _seedColors.map((color) {
                 final selected = color.toARGB32() == currentColor;
                 return GestureDetector(
@@ -90,10 +68,9 @@ class AccentColorPicker extends ConsumerWidget {
                 );
               }).toList(),
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
   }
 }
 

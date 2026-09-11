@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:logger/logger.dart';
+
+final _logger = Logger(printer: PrettyPrinter(methodCount: 0));
 
 class ApiClient {
   final FlutterSecureStorage _storage;
@@ -17,7 +20,7 @@ class ApiClient {
     dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
-      logPrint: (obj) => print('[API] $obj'),
+      logPrint: (obj) => _logger.d('[API] $obj'),
     ),);
   }
 

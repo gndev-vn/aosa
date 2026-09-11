@@ -175,15 +175,15 @@ class AppDatabase {
          expected_version, created_at, retry_count)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', [
-      data['record_id'],
-      data['repo_id'],
-      data['action'],
-      data['encrypted_data'],
-      data['nonce'],
-      data['salt'],
-      data['auth_tag'],
-      data['expected_version'],
-      data['created_at'],
+      data['record_id'] ?? '',
+      data['repo_id'] as String? ?? '',
+      data['action'] ?? 'update',
+      data['encrypted_data'] ?? '',
+      data['nonce'] ?? '',
+      data['salt'] ?? '',
+      data['auth_tag'] ?? '',
+      data['expected_version'] ?? 0,
+      data['created_at'] ?? DateTime.now().toUtc().toIso8601String(),
       data['retry_count'] ?? 0,
     ]);
     return _db.lastInsertRowId;

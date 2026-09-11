@@ -22,6 +22,10 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.drift.dart"
     - build/**
+    - android/**
+    - ios/**
+    - macos/**
+    - linux/**
   errors:
     avoid_redundant_argument_values: ignore
     curly_braces_in_flow_control_structures: ignore

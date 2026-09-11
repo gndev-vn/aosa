@@ -2,10 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../providers/app_init_provider.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/auth_provider.dart';
@@ -15,10 +12,10 @@ import '../providers/repo_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/sync_provider.dart';
 import '../widgets/add_otp_bottom_sheet.dart';
-import '../widgets/aosa_widgets.dart';
 import '../widgets/confirm_delete_dialog.dart';
 import '../widgets/fab_menu.dart';
 import '../widgets/home_empty_state.dart';
+import '../widgets/home_header.dart';
 import '../widgets/home_search_bar.dart';
 import '../widgets/otp_card.dart';
 import '../widgets/repo_picker_sheet.dart';
@@ -84,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _showFabMenu(BuildContext context, WidgetRef ref) {
     final repo = ref.read(otpRepositoryProvider);
+    if (repo == null) return;
     final cs = Theme.of(context).colorScheme;
 
     showFabMenu(context, actions: [
@@ -150,30 +148,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Scaffold(
       body: SafeArea(
-        child: Column(children: [
-          _buildHeader(cs),
-          HomeSearchBar(
-            controller: _searchController,
-            searchQuery: _searchQuery,
-            onChanged: (v) => setState(() => _searchQuery = v),
-            onClear: () { _searchController.clear(); setState(() => _searchQuery = ''); },
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(children: [
+              _buildHeader(),
+              HomeSearchBar(
+                controller: _searchController,
+                searchQuery: _searchQuery,
+                onChanged: (v) => setState(() => _searchQuery = v),
+                onClear: () { _searchController.clear(); setState(() => _searchQuery = ''); },
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? HomeEmptyState(searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null)
+                    : RefreshIndicator(
+                        onRefresh: () async { await HapticFeedback.mediumImpact(); await Future<void>.delayed(const Duration(milliseconds: 500)); },
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) => OtpCard(
+                            key: ValueKey(filtered[index].account.id),
+                            item: filtered[index],
+                            onEdit: () => _showOtpActions(context, ref, filtered[index]),
+                          ),
+                        ),
+                      ),
+              ),
+            ]),
           ),
-          Expanded(
-            child: filtered.isEmpty
-                ? HomeEmptyState(searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null)
-                : RefreshIndicator(
-                    onRefresh: () async { await HapticFeedback.mediumImpact(); await Future<void>.delayed(const Duration(milliseconds: 500)); },
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) => OtpCard(
-                        item: filtered[index],
-                        onEdit: () => _showOtpActions(context, ref, filtered[index]),
-                      ).animate().fadeIn(duration: 200.ms, delay: (index * 30).ms),
-                    ),
-                  ),
-          ),
-        ]),
+        ),
       ),
       floatingActionButton: ScaleTransition(
         scale: _fabAnimation,
@@ -210,7 +214,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildHeader(ColorScheme cs) {
+  Widget _buildHeader() {
     final settings = ref.watch(settingsProvider);
     final reposState = ref.watch(repoProvider);
     final syncState = ref.watch(syncProvider);
@@ -219,42 +223,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? reposState.repos.where((r) => r.id == _activeRepoId).firstOrNull?.name
         : null;
 
-    final title = Text('AOSA', style: GoogleFonts.poppins(fontSize: 48, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: cs.onSurface));
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
-      child: Row(children: [
-        if (settings.syncEnabled && authFlow == AuthFlow.authenticated)
-          aosaIconButton(
-            icon: syncState == SyncState.syncing
-                ? Icons.hourglass_top
-                : Icons.sync_rounded,
-            color: cs.onSurface,
-            onPressed: syncState == SyncState.syncing
-                ? () {}
-                : () => _triggerSync(context),
-          )
-        else
-          const SizedBox(width: 40),
-        Expanded(
-          child: settings.syncEnabled
-              ? GestureDetector(
-                  onTap: _showRepoPicker,
-                  child: Column(children: [
-                    title,
-                    if (activeName != null)
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.folder_outlined, size: 14, color: cs.primary),
-                        const SizedBox(width: 4),
-                        Text(activeName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: cs.primary)),
-                        Icon(Icons.expand_more, size: 14, color: cs.primary),
-                      ]),
-                  ]),
-                )
-              : Center(child: title),
-        ),
-        aosaIconButton(icon: Icons.settings, color: cs.onSurface, onPressed: () => ref.read(navigationProvider.notifier).goToSettings()),
-      ]),
+    return HomeHeader(
+      syncEnabled: settings.syncEnabled,
+      isAuthenticated: authFlow == AuthFlow.authenticated,
+      syncState: syncState,
+      activeRepoName: activeName,
+      onSync: () => _triggerSync(context),
+      onSelectRepo: _showRepoPicker,
+      onSettings: () => ref.read(navigationProvider.notifier).goToSettings(),
     );
   }
 
@@ -312,7 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           _actionTile(cs, Icons.delete_outline_rounded, 'Delete account', cs.errorContainer, cs.onErrorContainer, () async {
             Navigator.of(context).pop();
             if (await showConfirmDeleteDialog(context, issuer: item.account.issuer, accountLabel: null)) {
-              await repo.delete(item.account.id);
+              await repo?.delete(item.account.id);
               await HapticFeedback.mediumImpact();
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.account.issuer} deleted'), duration: const Duration(seconds: 2)));
             }

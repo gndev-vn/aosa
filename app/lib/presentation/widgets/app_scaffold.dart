@@ -18,7 +18,9 @@ class AppScaffold extends ConsumerWidget {
     final screen = switch (nav.currentScreen) {
       AppScreen.home => const HomeScreen(),
       AppScreen.settings => const SettingsScreen(),
-      AppScreen.editOtp => _buildEditScreen(ref, nav, repo),
+      AppScreen.editOtp => repo != null
+          ? _buildEditScreen(ref, nav, repo)
+          : const HomeScreen(),
     };
 
     return PopScope(

@@ -6,6 +6,7 @@ import '../../providers/settings_provider.dart';
 import '../../widgets/aosa_widgets.dart';
 import '../../widgets/accent_color_picker.dart';
 import '../../widgets/settings_helpers.dart';
+import '../../widgets/standard_bottom_sheet.dart';
 
 class AppearanceSection extends ConsumerWidget {
   final AppSettings settings;
@@ -28,6 +29,7 @@ class AppearanceSection extends ConsumerWidget {
                 leading: const IconBox(icon: Icons.palette_outlined),
                 title: 'Theme',
                 trailing: SettingsSelector(
+                  title: 'Theme',
                   value: settings.themeMode.name,
                   options: const [
                     ('Light', 'light'),
@@ -69,8 +71,8 @@ class AppearanceSection extends ConsumerWidget {
                     ],
                   ),
                   onTap: () {
-                    showDialog<void>(
-                      context: context,
+                    showSlideBottomSheet<void>(
+                      context,
                       builder: (_) => const AccentColorPicker(),
                     );
                   },

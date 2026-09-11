@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/platform/app_platform.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/entities/app_settings.dart';
 import 'presentation/providers/app_init_provider.dart';
@@ -15,10 +16,12 @@ import 'presentation/widgets/app_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  if (AppPlatformUtil.isMobile) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   final container = ProviderContainer();
   await container.read(appInitProvider.notifier).initialize();
@@ -97,14 +100,10 @@ class _AosaAppState extends ConsumerState<AosaApp> with WidgetsBindingObserver {
     final lockState = ref.watch(appLockProvider);
     final settings = ref.watch(settingsProvider);
     final seedColor = Color(settings.seedColor);
-    final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
-
-    final theme = switch (settings.themeMode) {
-      AppThemeMode.light => AppTheme.light(seedColor: seedColor),
-      AppThemeMode.dark => AppTheme.dark(seedColor: seedColor),
-      AppThemeMode.system => brightness == Brightness.dark
-          ? AppTheme.dark(seedColor: seedColor)
-          : AppTheme.light(seedColor: seedColor),
+    final themeMode = switch (settings.themeMode) {
+      AppThemeMode.light => ThemeMode.light,
+      AppThemeMode.dark => ThemeMode.dark,
+      AppThemeMode.system => ThemeMode.system,
     };
 
     final showApp = lockState.status == AppLockStatus.unlocked || !settings.pinEnabled;
@@ -112,7 +111,8 @@ class _AosaAppState extends ConsumerState<AosaApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'AOSA',
       debugShowCheckedModeBanner: false,
-      theme: theme,
+      themeMode: themeMode,
+      theme: AppTheme.light(seedColor: seedColor),
       darkTheme: AppTheme.dark(seedColor: seedColor),
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 500),

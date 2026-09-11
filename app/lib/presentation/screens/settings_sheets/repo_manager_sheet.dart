@@ -157,51 +157,82 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
   }
 
   void _showCreateDialog() {
-    final controller = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Repo'),
-        content: TextField(
-          controller: controller,
+    showSlideBottomSheet<void>(
+      context,
+      isScrollControlled: true,
+      builder: (_) => _CreateRepoSheet(
+        onCreate: (name) async {
+          final services = ref.read(appInitProvider);
+          if (services == null) return 'App not initialized';
+
+          final error = await ref.read(repoProvider.notifier).createRepo(
+                services.apiClient,
+                name,
+              );
+          if (error == null) {
+            await _load();
+          }
+          return error;
+        },
+      ),
+    );
+  }
+}
+
+class _CreateRepoSheet extends StatefulWidget {
+  final Future<String?> Function(String name) onCreate;
+
+  const _CreateRepoSheet({required this.onCreate});
+
+  @override
+  State<_CreateRepoSheet> createState() => _CreateRepoSheetState();
+}
+
+class _CreateRepoSheetState extends State<_CreateRepoSheet> {
+  final _controller = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || _submitting) return;
+    setState(() => _submitting = true);
+    final error = await widget.onCreate(name);
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StandardBottomSheet(
+      title: 'Create Repo',
+      confirmLabel: _submitting ? 'Creating...' : 'Create',
+      onConfirm: _submitting ? null : _submit,
+      onBack: () => Navigator.of(context).pop(),
+      isScrollControlled: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: TextField(
+          controller: _controller,
           decoration: const InputDecoration(
             labelText: 'Repo name',
             hintText: 'My Vault',
           ),
           autofocus: true,
+          onSubmitted: (_) => _submit(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-
-              final services = ref.read(appInitProvider);
-              if (services == null) return;
-
-              final error = await ref.read(repoProvider.notifier).createRepo(
-                    services.apiClient,
-                    name,
-                  );
-              if (error != null) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
-                  );
-                }
-                return;
-              }
-
-              if (ctx.mounted) Navigator.of(ctx).pop();
-              await _load();
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }

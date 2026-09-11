@@ -81,9 +81,11 @@ class OtpRepositoryImpl implements OtpRepository {
         salt: existing['salt'] as String,
         authTag: existing['auth_tag'] as String,
       );
+      final activeRepoId = _db.getSetting('active_repo_id');
+      final repoId = (activeRepoId != null && activeRepoId.isNotEmpty) ? activeRepoId : 'default';
       _db.addToQueue({
         'record_id': id,
-        'repo_id': _db.getSetting('active_repo_id') ?? '',
+        'repo_id': repoId,
         'action': 'delete',
         'encrypted_data': payload.ciphertext,
         'nonce': payload.nonce,
@@ -97,11 +99,11 @@ class OtpRepositoryImpl implements OtpRepository {
 
   void _queueChange(Map<String, dynamic> data, bool isUpdate) {
     final activeRepoId = _db.getSetting('active_repo_id');
-    if (activeRepoId == null || activeRepoId.isEmpty) return;
+    final repoId = (activeRepoId != null && activeRepoId.isNotEmpty) ? activeRepoId : 'default';
 
     _db.addToQueue({
       'record_id': data['id'],
-      'repo_id': activeRepoId,
+      'repo_id': repoId,
       'action': isUpdate ? 'update' : 'create',
       'encrypted_data': data['encrypted_data'],
       'nonce': data['nonce'],

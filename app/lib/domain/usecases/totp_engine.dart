@@ -20,16 +20,18 @@ class TotpEngine {
   });
 
   Future<String> generateCode(String secretBase32, {DateTime? timestamp}) async {
+    final p = period > 0 ? period : _defaultPeriod;
     final time = timestamp ?? DateTime.now();
     final unixSeconds = time.millisecondsSinceEpoch ~/ 1000;
-    final counter = unixSeconds ~/ period;
+    final counter = unixSeconds ~/ p;
     return generateHotp(secretBase32, counter, digits: digits, algorithm: algorithm);
   }
 
   int get timeLeft {
+    final p = period > 0 ? period : _defaultPeriod;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final remaining = period - (now % period);
-    return remaining == 0 ? period : remaining;
+    final remaining = p - (now % p);
+    return remaining == 0 ? p : remaining;
   }
 
   @visibleForTesting
@@ -50,11 +52,12 @@ class TotpEngine {
     int digits = _defaultDigits,
     String algorithm = _defaultAlgorithm,
   }) async {
+    final d = (digits > 0 && digits <= 10) ? digits : _defaultDigits;
     final counterBytes = intToBytes(counter);
     final hmac = await computeHmac(secret, counterBytes, algorithm);
     final truncated = dynamicTruncation(hmac);
-    final codeNum = truncated % pow(10, digits).toInt();
-    return codeNum.toString().padLeft(digits, '0');
+    final codeNum = truncated % pow(10, d).toInt();
+    return codeNum.toString().padLeft(d, '0');
   }
 
   @visibleForTesting
@@ -104,9 +107,7 @@ class TotpEngine {
   static List<int> decodeBase32(String input) {
     final cleaned = input
         .toUpperCase()
-        .replaceAll(' ', '')
-        .replaceAll('-', '')
-        .replaceAll('=', '');
+        .replaceAll(RegExp(r'[\s\-_=]'), '');
 
     final bytes = <int>[];
     int buffer = 0;
@@ -133,9 +134,7 @@ class TotpEngine {
     if (input.isEmpty) return false;
     final cleaned = input
         .toUpperCase()
-        .replaceAll(' ', '')
-        .replaceAll('-', '')
-        .replaceAll('=', '');
+        .replaceAll(RegExp(r'[\s\-_=]'), '');
     if (cleaned.length < 4) return false;
     return cleaned
         .runes

@@ -9,12 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_init_provider.dart';
 
-final otpRepositoryProvider = Provider<OtpRepositoryImpl>((ref) {
+final otpRepositoryProvider = Provider<OtpRepositoryImpl?>((ref) {
   final services = ref.watch(appInitProvider);
-  if (services == null) {
-    throw StateError('App not initialized — cannot access repository');
-  }
-  return services.otpRepository as OtpRepositoryImpl;
+  if (services == null) return null;
+  return services.otpRepository as OtpRepositoryImpl?;
 });
 
 class OtpCodeWithAccount {
@@ -39,28 +37,33 @@ class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
     });
   }
 
-  void loadAccounts(List<OtpAccount> accounts) {
+  Future<void> loadAccounts(List<OtpAccount> accounts) async {
     final items = <OtpCodeWithAccount>[];
     for (final a in accounts) {
       final engine = TotpEngine(period: a.period, digits: a.digits, algorithm: a.algorithm);
-      items.add(OtpCodeWithAccount(
-        account: a,
-        code: TotpCode(
-          code: '------',
-          timeLeft: engine.timeLeft,
-          totalPeriod: a.period,
-          algorithm: a.algorithm,
-          digits: a.digits,
+      items.add(
+        OtpCodeWithAccount(
+          account: a,
+          code: TotpCode(
+            code: '------',
+            timeLeft: engine.timeLeft,
+            totalPeriod: a.period,
+            algorithm: a.algorithm,
+            digits: a.digits,
+          ),
         ),
-      ),);
+      );
     }
     state = items;
-    _generateAllCodes();
+    await _generateAllCodes();
   }
 
   void startAutoRefresh() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) => _refreshCodes());
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      checkTokenRotation(now);
+    });
   }
 
   void stopAutoRefresh() {
@@ -69,17 +72,19 @@ class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
   }
 
   Future<void> _generateAllCodes() async {
-    for (int i = 0; i < state.length; i++) {
-      final item = state[i];
+    final updated = <OtpCodeWithAccount>[];
+    for (final item in state) {
       final engine = TotpEngine(
         period: item.account.period,
         digits: item.account.digits,
         algorithm: item.account.algorithm,
       );
+      String codeStr = '------';
       try {
-        final codeStr = await engine.generateCode(item.account.secretBase32);
-        final updated = [...state];
-        updated[i] = OtpCodeWithAccount(
+        codeStr = await engine.generateCode(item.account.secretBase32);
+      } catch (_) {}
+      updated.add(
+        OtpCodeWithAccount(
           account: item.account,
           code: TotpCode(
             code: codeStr,
@@ -88,56 +93,36 @@ class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
             algorithm: item.account.algorithm,
             digits: item.account.digits,
           ),
-        );
-        state = updated;
-      } catch (_) {}
+        ),
+      );
     }
+    if (!mounted) return;
+    state = updated;
   }
 
-  void _refreshCodes() {
+  void checkTokenRotation(int now) {
     if (_isRefreshing || state.isEmpty) return;
-    _isRefreshing = true;
 
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final needsRegeneration = <int>[];
-
     for (int i = 0; i < state.length; i++) {
       final item = state[i];
       final timeLeft = item.account.period - (now % item.account.period);
-      final adjustedTimeLeft = timeLeft == 0 ? item.account.period : timeLeft;
-
-      if (adjustedTimeLeft == item.account.period) {
+      if (timeLeft == item.account.period) {
         needsRegeneration.add(i);
       }
     }
 
     if (needsRegeneration.isEmpty) {
-      _updateTimeLeftOnly(now);
-      _isRefreshing = false;
+      // Avoid mutating state if no code rolled over.
+      // Progress indicators consume isolated totpTickerProvider.
       return;
     }
 
     _regenerateAndUpdate(needsRegeneration, now);
   }
 
-  void _updateTimeLeftOnly(int now) {
-    state = [
-      for (final item in state)
-        OtpCodeWithAccount(
-          account: item.account,
-          code: TotpCode(
-            code: item.code.code,
-            timeLeft: _calcTimeLeft(item.account.period, now),
-            totalPeriod: item.account.period,
-            algorithm: item.account.algorithm,
-            digits: item.account.digits,
-          ),
-        ),
-    ];
-    _isRefreshing = false;
-  }
-
   Future<void> _regenerateAndUpdate(List<int> indices, int now) async {
+    _isRefreshing = true;
     final updated = [...state];
 
     for (final i in indices) {
@@ -153,33 +138,21 @@ class OtpListNotifier extends StateNotifier<List<OtpCodeWithAccount>> {
           account: item.account,
           code: TotpCode(
             code: codeStr,
-            timeLeft: _calcTimeLeft(item.account.period, now),
+            timeLeft: item.account.period,
             totalPeriod: item.account.period,
             algorithm: item.account.algorithm,
             digits: item.account.digits,
           ),
         );
-      } catch (_) {
-        updated[i] = OtpCodeWithAccount(
-          account: item.account,
-          code: TotpCode(
-            code: item.code.code,
-            timeLeft: _calcTimeLeft(item.account.period, now),
-            totalPeriod: item.account.period,
-            algorithm: item.account.algorithm,
-            digits: item.account.digits,
-          ),
-        );
-      }
+      } catch (_) {}
     }
 
+    if (!mounted) {
+      _isRefreshing = false;
+      return;
+    }
     state = updated;
     _isRefreshing = false;
-  }
-
-  int _calcTimeLeft(int period, int now) {
-    final remaining = period - (now % period);
-    return remaining == 0 ? period : remaining;
   }
 
   @override

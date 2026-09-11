@@ -29,6 +29,21 @@ void main() {
       expect(result.period, 60);
     });
 
+    test('parses case-insensitive algorithms and cleans secret formatting', () {
+      final resultSha256 = OtpAuthParser.parse(
+        'otpauth://totp/ACME:john@example.com?secret=gez-dgn-bvgy-3tqo-jq&algorithm=sha-256',
+      );
+      expect(resultSha256, isNotNull);
+      expect(resultSha256!.algorithm, 'SHA256');
+      expect(resultSha256.secretBase32, 'gezdgnbvgy3tqojq');
+
+      final resultSha512 = OtpAuthParser.parse(
+        'otpauth://totp/ACME:john@example.com?secret=GEZDGNBVGY3TQOJQ&algorithm=sha512',
+      );
+      expect(resultSha512, isNotNull);
+      expect(resultSha512!.algorithm, 'SHA512');
+    });
+
     test('parses HOTP URI with counter', () {
       final result = OtpAuthParser.parse(
         'otpauth://hotp/ACME:john@example.com?secret=GEZDGNBVGY3TQOJQ&counter=42&issuer=ACME',

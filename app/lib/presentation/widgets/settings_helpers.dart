@@ -84,7 +84,7 @@ class SettingsRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             leading,
@@ -97,7 +97,7 @@ class SettingsRow extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                     ),
                   ),
@@ -126,27 +126,34 @@ class SettingsRow extends StatelessWidget {
 
 class ThinDivider extends StatelessWidget {
   final double indent;
+  final double endIndent;
 
-  const ThinDivider({super.key, this.indent = 60});
+  const ThinDivider({
+    super.key,
+    this.indent = 66,
+    this.endIndent = 16,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 1,
-      margin: EdgeInsets.only(left: indent, right: 16),
+      margin: EdgeInsets.only(left: indent, right: endIndent),
       color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(8),
     );
   }
 }
 
 class SettingsSelector extends StatelessWidget {
+  final String? title;
   final String value;
   final List<(String label, String value)> options;
   final ValueChanged<String> onChanged;
 
   const SettingsSelector({
     super.key,
+    this.title,
     required this.value,
     required this.options,
     required this.onChanged,
@@ -155,21 +162,18 @@ class SettingsSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final currentLabel = options.firstWhere((o) => o.$2 == value).$1;
+    final currentLabel = options.firstWhere((o) => o.$2 == value, orElse: () => (value, value)).$1;
     return GestureDetector(
-      onTap: () {
-        showDialog<void>(
-          context: context,
-          builder: (ctx) => OptionPicker(
-            title: '',
-            options: options,
-            selected: value,
-            onSelected: (v) {
-              Navigator.of(ctx).pop();
-              onChanged(v);
-            },
-          ),
+      onTap: () async {
+        final result = await showOptionPickerSheet(
+          context,
+          title: title ?? '',
+          options: options,
+          selected: value,
         );
+        if (result != null && result != value) {
+          onChanged(result);
+        }
       },
       child: Row(
         mainAxisSize: MainAxisSize.min,

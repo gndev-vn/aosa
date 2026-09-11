@@ -2,14 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const _radiusSm = 12.0;
-  static const _radiusLg = 28.0;
-  static const _radiusPill = 24.0;
+  static const radiusSm = 12.0;
+  static const radiusLg = 28.0;
+  static const radiusPill = 24.0;
+
+  static const darkSurface = Color(0xFF1A1C1E);
+  static const darkCardSurface = Color(0xFF232528);
+  static const lightSurface = Color(0xFFF8F9FA);
+  static const lightCardSurface = Colors.white;
+
+  static const _radiusSm = radiusSm;
+  static const _radiusLg = radiusLg;
+  static const _radiusPill = radiusPill;
+
+  static TextStyle titleStyle({Color? color}) {
+    return _inter(
+      fontSize: 36,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.5,
+      color: color,
+    );
+  }
+
+  static TextStyle codeStyle({Color? color}) {
+    return GoogleFonts.jetBrainsMono(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 2.0,
+      color: color,
+    );
+  }
 
   static ThemeData light({required Color seedColor}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
-      surface: Colors.white,
+      surface: lightSurface,
     );
     return _buildTheme(colorScheme, Brightness.light);
   }
@@ -44,6 +71,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
+      splashFactory: InkRipple.splashFactory,
 
       appBarTheme: AppBarTheme(
         centerTitle: false,

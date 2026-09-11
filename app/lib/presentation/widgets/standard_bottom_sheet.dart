@@ -9,14 +9,13 @@ Future<T?> showSlideBottomSheet<T>(
 }) {
   return showModalBottomSheet<T>(
     context: context,
-    useSafeArea: useSafeArea,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    useSafeArea: false,
     isScrollControlled: isScrollControlled,
     useRootNavigator: false,
     isDismissible: isDismissible,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    clipBehavior: Clip.antiAlias,
+    constraints: const BoxConstraints(maxWidth: 640),
     builder: builder,
   );
 }
@@ -46,17 +45,17 @@ class StandardBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bottomInset = isScrollControlled
-        ? MediaQuery.of(context).viewInsets.bottom
-        : 0.0;
+    final media = MediaQuery.of(context);
+    final bottomInset = (isScrollControlled && media.viewInsets.bottom > 0)
+        ? media.viewInsets.bottom + 16.0
+        : media.viewPadding.bottom + 16.0;
 
-    final sheet = Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildHeader(cs),
-          AnimatedSwitcher(
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildHeader(cs),
+        Flexible(
+          child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             switchInCurve: Curves.easeOut,
             switchOutCurve: Curves.easeIn,
@@ -75,19 +74,28 @@ class StandardBottomSheet extends StatelessWidget {
             child: KeyedSubtree(
               key: ValueKey(title),
               child: SingleChildScrollView(
-                padding: padding ?? const EdgeInsets.fromLTRB(4, 8, 4, 20),
+                padding: padding ?? const EdgeInsets.fromLTRB(16, 8, 16, 20),
                 child: child,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
 
-    if (useSafeArea) {
-      return SafeArea(top: false, child: sheet);
-    }
-    return sheet;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 640),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset),
+        child: Material(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(28),
+          clipBehavior: Clip.antiAlias,
+          elevation: 6,
+          child: content,
+        ),
+      ),
+    );
   }
 
   Widget _buildHeader(ColorScheme cs) {
@@ -95,7 +103,7 @@ class StandardBottomSheet extends StatelessWidget {
     final hasConfirm = confirmLabel != null && onConfirm != null;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
