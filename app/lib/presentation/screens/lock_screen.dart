@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../data/encryption/crypto_service.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/settings_provider.dart';
-import '../widgets/app_decoration.dart';
 import '../widgets/pin_widgets.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
@@ -65,93 +66,129 @@ class _LockScreenState extends ConsumerState<LockScreen> with TickerProviderStat
   Widget build(BuildContext context) {
     final lockState = ref.watch(appLockProvider);
     final settings = ref.watch(settingsProvider);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final shadTheme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
 
-    if (_unlockSuccess) return _buildSuccessOverlay(theme, cs);
+    if (_unlockSuccess) return _buildSuccessOverlay(shadTheme);
 
     final isCooldown = lockState.cooldownUntil != null && DateTime.now().isBefore(lockState.cooldownUntil!);
     final biometricPrimary = settings.biometricEnabled && _biometricAvailable && !isCooldown;
     final showPin = !biometricPrimary || _biometricAttempted;
 
-    return Scaffold(
-      body: Container(
-        decoration: appBackground(cs),
-        child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                _buildLogo(cs),
-                const SizedBox(height: 20),
-                if (showPin) ...[
-                  Text('Enter PIN', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text('Unlock app', style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-                ],
-                if (biometricPrimary && !showPin)
-                  Text(_isAuthenticating ? 'Authenticating…' : 'Unlock app', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-                if (biometricPrimary && _biometricAttempted && !_isAuthenticating)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text('Biometric failed. Use your PIN.', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                  ),
-                if (isCooldown) const Padding(padding: EdgeInsets.only(top: 12), child: ErrorBanner(message: 'Too many attempts. Try again later.')),
-                if (biometricPrimary && !_biometricAttempted && !_isAuthenticating)
-                  Padding(padding: const EdgeInsets.only(top: 12), child: Text('Checking biometric…', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant))),
+    final scaffold = Scaffold(
+      backgroundColor: shadTheme.colorScheme.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _buildLogo(shadTheme),
+              const SizedBox(height: 20),
+              if (showPin) ...[
+                Text('Enter PIN', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: shadTheme.colorScheme.foreground)),
+                const SizedBox(height: 6),
+                Text('Unlock app', style: TextStyle(fontSize: 14, color: shadTheme.colorScheme.mutedForeground)),
+              ],
+              if (biometricPrimary && !showPin)
+                Text(_isAuthenticating ? 'Authenticating…' : 'Unlock app', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: shadTheme.colorScheme.foreground)),
+              if (biometricPrimary && _biometricAttempted && !_isAuthenticating)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text('Biometric failed. Use your PIN.', style: TextStyle(fontSize: 12, color: shadTheme.colorScheme.mutedForeground)),
+                ),
+              if (isCooldown) const Padding(padding: EdgeInsets.only(top: 12), child: ErrorBanner(message: 'Too many attempts. Try again later.')),
+              if (biometricPrimary && !_biometricAttempted && !_isAuthenticating)
+                Padding(padding: const EdgeInsets.only(top: 12), child: Text('Checking biometric…', style: TextStyle(fontSize: 12, color: shadTheme.colorScheme.mutedForeground))),
+              const SizedBox(height: 36),
+              if (showPin) ...[
+                PinDots(filledCount: _enteredPin.length, animate: true, spacing: 7),
                 const SizedBox(height: 36),
-                if (showPin) ...[
-                  PinDots(filledCount: _enteredPin.length, animate: true, spacing: 7),
-                  const SizedBox(height: 36),
-                  Numpad(onKeyPressed: _onKeyPress, disabled: isCooldown),
-                ],
-                if (biometricPrimary && !showPin) const SizedBox(height: 36),
-                if (biometricPrimary)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 24),
-                    child: FilledButton.icon(
-                      onPressed: _authenticateBiometric,
-                      icon: const Icon(Icons.fingerprint, size: 20),
-                      label: Text(_biometricAttempted ? 'Retry Biometric' : 'Use Biometric'),
-                      style: FilledButton.styleFrom(minimumSize: const Size(200, 48)),
-                    ),
+                Numpad(onKeyPressed: _onKeyPress, disabled: isCooldown),
+              ],
+              if (biometricPrimary && !showPin) const SizedBox(height: 36),
+              if (biometricPrimary)
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: ShadButton.outline(
+                    onPressed: _authenticateBiometric,
+                    leading: const Icon(LucideIcons.fingerprint, size: 18),
+                    width: 220,
+                    height: 48,
+                    child: Text(_biometricAttempted ? 'Retry Biometric' : 'Use Biometric'),
                   ),
-              ]),
-            ),
+                ),
+            ]),
           ),
         ),
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: scaffold,
+      );
+    }
+    return scaffold;
   }
 
-  Widget _buildSuccessOverlay(ThemeData theme, ColorScheme cs) => Scaffold(
-    body: Container(
-      decoration: appBackground(cs),
-      child: Center(
-        child: FadeTransition(
-          opacity: _successFadeAnimation,
-          child: ScaleTransition(
-            scale: _successScaleAnimation,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              GradientIcon(icon: Icons.check_rounded, size: 96, iconSize: 52, borderRadius: 28, boxShadow: [
-                BoxShadow(color: cs.primary.withAlpha(80), blurRadius: 30, offset: const Offset(0, 12)),
-              ]),
-              const SizedBox(height: 24),
-              Text('Welcome back!', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
-            ]),
-          ),
+  Widget _buildSuccessOverlay(ShadThemeData shadTheme) => Scaffold(
+    backgroundColor: shadTheme.colorScheme.background,
+    body: Center(
+      child: FadeTransition(
+        opacity: _successFadeAnimation,
+        child: ScaleTransition(
+          scale: _successScaleAnimation,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ShadAvatar(
+              null,
+              size: const Size.square(96),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+              backgroundColor: shadTheme.colorScheme.primary,
+              placeholder: Icon(
+                LucideIcons.check,
+                size: 52,
+                color: shadTheme.colorScheme.primaryForeground,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Welcome back!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: shadTheme.colorScheme.foreground,
+              ),
+            ),
+          ]),
         ),
       ),
     ),
   );
 
-  Widget _buildLogo(ColorScheme cs) => AnimatedBuilder(
+  Widget _buildLogo(ShadThemeData shadTheme) => AnimatedBuilder(
     animation: _pulseAnimation,
     builder: (context, child) => Transform.scale(scale: _isAuthenticating ? _pulseAnimation.value : 1.0, child: child),
-    child: GradientIcon(
-      icon: _isAuthenticating ? Icons.fingerprint : Icons.lock_outline_rounded,
-      size: 80, iconSize: 40, borderRadius: 22,
-      boxShadow: [BoxShadow(color: cs.primary.withAlpha(60), blurRadius: 20, offset: const Offset(0, 8))],
+    child: ShadAvatar(
+      null,
+      size: const Size.square(80),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+      ),
+      backgroundColor: shadTheme.colorScheme.primary,
+      placeholder: Icon(
+        _isAuthenticating ? LucideIcons.fingerprint : LucideIcons.lock,
+        size: 40,
+        color: shadTheme.colorScheme.primaryForeground,
+      ),
     ),
   );
 
@@ -171,10 +208,10 @@ class _LockScreenState extends ConsumerState<LockScreen> with TickerProviderStat
     ref.read(appLockProvider.notifier).recordFailedAttempt();
     setState(() => _enteredPin = '');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Row(children: [
-      Icon(Icons.error_outline, size: 18, color: Colors.redAccent),
-      SizedBox(width: 8),
-      Text('Incorrect PIN'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [
+      Icon(LucideIcons.circleAlert, size: 18, color: Theme.of(context).colorScheme.error),
+      const SizedBox(width: 8),
+      const Text('Incorrect PIN'),
     ])));
   }
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'core/platform/app_platform.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/entities/app_settings.dart';
@@ -108,44 +109,54 @@ class _AosaAppState extends ConsumerState<AosaApp> with WidgetsBindingObserver {
 
     final showApp = lockState.status == AppLockStatus.unlocked || !settings.pinEnabled;
 
-    return MaterialApp(
-      title: 'AOSA',
-      debugShowCheckedModeBanner: false,
+    return ShadApp.custom(
       themeMode: themeMode,
-      theme: AppTheme.light(seedColor: seedColor),
-      darkTheme: AppTheme.dark(seedColor: seedColor),
-      home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.05),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ),),
-            child: FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.95, end: 1.0).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutBack,
+      theme: AppTheme.shadThemeLight(seedColor: seedColor),
+      darkTheme: AppTheme.shadThemeDark(seedColor: seedColor),
+      appBuilder: (context) {
+        return MaterialApp(
+          title: 'AOSA',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeMode,
+          theme: AppTheme.light(seedColor: seedColor),
+          darkTheme: AppTheme.dark(seedColor: seedColor),
+          builder: (context, child) => ShadSonner(
+            child: ShadAppBuilder(child: child),
+          ),
+          home: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.05),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutBack,
+                      ),
+                    ),
+                    child: child,
                   ),
                 ),
-                child: child,
-              ),
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey(showApp),
+              child: showApp ? const AppScaffold() : const LockScreen(),
             ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey(showApp),
-          child: showApp ? const AppScaffold() : const LockScreen(),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,35 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 class AppTheme {
-  static const radiusSm = 12.0;
-  static const radiusLg = 28.0;
-  static const radiusPill = 24.0;
+  static const radiusSm = 8.0;
+  static const radiusMd = 12.0;
+  static const radiusLg = 16.0;
+  static const radiusPill = 9999.0;
 
-  static const darkSurface = Color(0xFF1A1C1E);
-  static const darkCardSurface = Color(0xFF232528);
-  static const lightSurface = Color(0xFFF8F9FA);
+  // Modern Zinc Color Palette
+  static const darkSurface = Color(0xFF09090B);      // Zinc-950
+  static const darkCardSurface = Color(0xFF18181B);  // Zinc-900
+  static const darkBorder = Color(0xFF27272A);       // Zinc-800
+  static const darkMuted = Color(0xFFA1A1AA);        // Zinc-400
+  static const darkDestructive = Color(0xFFEF4444);  // Red-500
+
+  static const lightSurface = Color(0xFFF4F4F5);     // Zinc-100
   static const lightCardSurface = Colors.white;
+  static const lightBorder = Color(0xFFE4E4E7);      // Zinc-200
+  static const lightMuted = Color(0xFF71717A);       // Zinc-500
+  static const lightDestructive = Color(0xFFDC2626); // Red-600
+
+  // Pure Shadcn Surface & Border Helpers
+  static Color headerBackground(bool isDark) =>
+      isDark ? darkSurface : lightSurface;
 
   static const _radiusSm = radiusSm;
-  static const _radiusLg = radiusLg;
-  static const _radiusPill = radiusPill;
 
   static TextStyle titleStyle({Color? color}) {
     return _inter(
-      fontSize: 36,
-      fontWeight: FontWeight.w700,
-      letterSpacing: -0.5,
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -0.8,
       color: color,
     );
   }
 
-  static TextStyle codeStyle({Color? color}) {
+  static TextStyle codeStyle({
+    Color? color,
+    double fontSize = 28,
+    FontWeight fontWeight = FontWeight.w700,
+  }) {
     return GoogleFonts.jetBrainsMono(
-      fontSize: 28,
-      fontWeight: FontWeight.w700,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
       letterSpacing: 2.0,
+      fontFeatures: const [FontFeature.tabularFigures()],
       color: color,
+    );
+  }
+
+  static ShadThemeData shadThemeLight({required Color seedColor}) {
+    final lightZinc = ShadZincColorScheme.light(
+      primary: seedColor,
+      background: lightSurface,
+      card: lightCardSurface,
+      border: lightBorder,
+    );
+    return ShadThemeData(
+      brightness: Brightness.light,
+      colorScheme: lightZinc,
+      cardTheme: ShadCardTheme(
+        backgroundColor: lightCardSurface,
+        border: ShadBorder.all(color: lightBorder, width: 1.0),
+        radius: BorderRadius.circular(radiusSm),
+      ),
+      outlineButtonTheme: ShadButtonTheme(
+        foregroundColor: lightZinc.foreground,
+      ),
+      ghostButtonTheme: ShadButtonTheme(
+        foregroundColor: lightZinc.foreground,
+      ),
+      radius: BorderRadius.circular(radiusSm),
+    );
+  }
+
+  static ShadThemeData shadThemeDark({required Color seedColor}) {
+    final darkZinc = ShadZincColorScheme.dark(
+      primary: seedColor,
+      background: darkSurface,
+      card: darkCardSurface,
+      border: darkBorder,
+    );
+    return ShadThemeData(
+      brightness: Brightness.dark,
+      colorScheme: darkZinc,
+      cardTheme: ShadCardTheme(
+        backgroundColor: darkCardSurface,
+        border: ShadBorder.all(color: darkBorder, width: 1.0),
+        radius: BorderRadius.circular(radiusSm),
+      ),
+      outlineButtonTheme: ShadButtonTheme(
+        foregroundColor: darkZinc.foreground,
+      ),
+      ghostButtonTheme: ShadButtonTheme(
+        foregroundColor: darkZinc.foreground,
+      ),
+      radius: BorderRadius.circular(radiusSm),
     );
   }
 
@@ -37,6 +104,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       surface: lightSurface,
+      brightness: Brightness.light,
     );
     return _buildTheme(colorScheme, Brightness.light);
   }
@@ -45,7 +113,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
-      surface: const Color(0xFF1A1C1E),
+      surface: darkSurface,
     );
     return _buildTheme(colorScheme, Brightness.dark);
   }
@@ -72,6 +140,9 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
       splashFactory: InkRipple.splashFactory,
+      iconTheme: IconThemeData(
+        color: isDark ? const Color(0xFFFAFAFA) : const Color(0xFF09090B),
+      ),
 
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -192,19 +263,19 @@ class AppTheme {
 
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_radiusLg),
+          borderRadius: BorderRadius.circular(_radiusSm),
         ),
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF232528) : Colors.white,
+        backgroundColor: isDark ? darkCardSurface : lightCardSurface,
       ),
 
       bottomSheetTheme: BottomSheetThemeData(
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(_radiusLg)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(_radiusSm)),
         ),
         elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF1A1C1E) : Colors.white,
-        modalBackgroundColor: isDark ? const Color(0xFF1A1C1E) : Colors.white,
+        backgroundColor: isDark ? darkCardSurface : lightCardSurface,
+        modalBackgroundColor: isDark ? darkCardSurface : lightCardSurface,
         dragHandleColor: colorScheme.onSurfaceVariant.withAlpha(80),
         dragHandleSize: const Size(36, 4),
       ),
@@ -215,7 +286,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(_radiusSm),
         ),
         elevation: 2,
-        backgroundColor: isDark ? const Color(0xFF2C2F33) : const Color(0xFF1F1F1F),
+        backgroundColor: isDark ? darkCardSurface : const Color(0xFF09090B),
         contentTextStyle: _inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
@@ -230,22 +301,22 @@ class AppTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusSm)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusSm)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusSm)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusPill)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radiusSm)),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import 'package:aosa/presentation/widgets/home_empty_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   final testAccounts = [
@@ -65,14 +66,14 @@ void main() {
       expect(find.text('Google'), findsOneWidget);
 
       // Enter search query "git"
-      await tester.enterText(find.byType(TextField), 'git');
+      await tester.enterText(find.byType(EditableText), 'git');
       await tester.pump();
 
       expect(find.text('GitHub'), findsOneWidget);
       expect(find.text('Google'), findsNothing);
 
       // Clear search query via clear button
-      final clearButton = find.byIcon(Icons.clear);
+      final clearButton = find.byIcon(LucideIcons.x);
       expect(clearButton, findsOneWidget);
       await tester.tap(clearButton);
       await tester.pump();
@@ -81,7 +82,7 @@ void main() {
       expect(find.text('Google'), findsOneWidget);
 
       // Search with no matches displays HomeEmptyState
-      await tester.enterText(find.byType(TextField), 'xyz-not-found');
+      await tester.enterText(find.byType(EditableText), 'xyz-not-found');
       await tester.pump();
 
       expect(find.text('GitHub'), findsNothing);

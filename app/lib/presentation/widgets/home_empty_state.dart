@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 
 class HomeEmptyState extends StatelessWidget {
   final String? searchQuery;
@@ -8,26 +10,97 @@ class HomeEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seedColor = Theme.of(context).colorScheme.primary;
+    final shadTheme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seedColor)
+            : AppTheme.shadThemeLight(seedColor: seedColor));
     final hasFilter = searchQuery != null && searchQuery!.isNotEmpty;
 
+    final Widget content;
     if (hasFilter) {
-      return Center(
+      content = Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.search_off_rounded,
-                size: 72,
-                color: colorScheme.onSurfaceVariant.withAlpha(100),
+              ShadAvatar(
+                null,
+                size: const Size.square(56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                ),
+                backgroundColor: shadTheme.colorScheme.secondary,
+                placeholder: Icon(
+                  LucideIcons.searchX,
+                  size: 26,
+                  color: shadTheme.colorScheme.mutedForeground,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
                 'No results for "$searchQuery"',
-                style: theme.textTheme.titleMedium,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: shadTheme.colorScheme.foreground,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Try checking for typos or searching with another keyword',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: shadTheme.colorScheme.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      content = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ShadAvatar(
+                null,
+                size: const Size.square(64),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                ),
+                backgroundColor: shadTheme.colorScheme.secondary,
+                placeholder: Icon(
+                  LucideIcons.keyRound,
+                  size: 30,
+                  color: shadTheme.colorScheme.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'No OTP accounts yet',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: shadTheme.colorScheme.foreground,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Add your first account using the + button below',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: shadTheme.colorScheme.mutedForeground,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -35,52 +108,12 @@ class HomeEmptyState extends StatelessWidget {
       );
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primary.withAlpha(60),
-                    colorScheme.primaryContainer,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Icon(
-                Icons.lock_outline_rounded,
-                size: 48,
-                color: colorScheme.primary,
-              ),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms)
-                .scale(delay: 200.ms, duration: 400.ms, curve: Curves.elasticOut),
-            const SizedBox(height: 24),
-            Text(
-              'No OTP accounts yet',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
-            const SizedBox(height: 10),
-            Text(
-              'Add your first account to get started',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
-          ],
-        ),
-      ),
-    );
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: content,
+      );
+    }
+    return content;
   }
 }

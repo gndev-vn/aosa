@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../presentation/providers/otp_list_provider.dart';
@@ -24,29 +26,13 @@ class OtpCard extends StatefulWidget {
   State<OtpCard> createState() => _OtpCardState();
 }
 
-class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-  bool _isPressed = false;
+class _OtpCardState extends State<OtpCard> {
   bool _copied = false;
   Timer? _copiedTimer;
 
   @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
   void dispose() {
     _copiedTimer?.cancel();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -76,287 +62,406 @@ class _OtpCardState extends State<OtpCard> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final shadTheme = existingTheme ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.shadThemeDark(
+                seedColor: Theme.of(context).colorScheme.primary,
+              )
+            : AppTheme.shadThemeLight(
+                seedColor: Theme.of(context).colorScheme.primary,
+              ));
+    final isDark = shadTheme.brightness == Brightness.dark;
 
-    if (widget.compact) {
-      return _buildCompactCard(context, colorScheme);
+    final card = widget.compact
+        ? _buildCompactCard(context, shadTheme, isDark)
+        : _buildFullCard(context, shadTheme, isDark);
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: card,
+      );
     }
-    return _buildFullCard(context, colorScheme);
+    return card;
   }
 
-  Widget _buildFullCard(BuildContext context, ColorScheme colorScheme) {
+  Widget _buildFullCard(
+    BuildContext context,
+    ShadThemeData shadTheme,
+    bool isDark,
+  ) {
     final account = widget.item.account;
     final code = widget.item.code;
-    final isDark = colorScheme.brightness == Brightness.dark;
+    final borderColor = _copied
+        ? shadTheme.colorScheme.primary
+        : shadTheme.colorScheme.border;
 
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _isPressed ? _pulseAnimation.value : 1.0,
-        child: child,
-      ),
-      child: GestureDetector(
-        onTap: () {
-          _pulseController.reverse();
-          _copyCode(context);
-        },
-        onLongPress: widget.onEdit,
-        onTapDown: (_) {
-          setState(() => _isPressed = true);
-          _pulseController.forward();
-        },
-        onTapUp: (_) {
-          setState(() => _isPressed = false);
-          _pulseController.reverse();
-        },
-        onTapCancel: () {
-          setState(() => _isPressed = false);
-          _pulseController.reverse();
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkCardSurface : AppTheme.lightCardSurface,
-            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
-            border: Border.all(
-              color: _copied
-                  ? colorScheme.primary
-                  : colorScheme.outlineVariant.withAlpha(50),
-              width: _copied ? 1.5 : 1.0,
-            ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _copyCode(context),
+      onLongPress: widget.onEdit,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: ShadCard(
+          radius: BorderRadius.circular(AppTheme.radiusSm),
+          backgroundColor: shadTheme.colorScheme.card,
+          border: ShadBorder.all(
+            color: borderColor,
+            width: _copied ? 1.5 : 1.0,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildAvatar(colorScheme, account.issuer),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  account.issuer,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildAvatar(shadTheme, account.issuer),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                account.issuer,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: shadTheme.colorScheme.foreground,
+                                  letterSpacing: -0.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_copied) ...[
+                              const SizedBox(width: 8),
+                              ShadBadge.secondary(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.check,
+                                      size: 11,
+                                      color: shadTheme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Copied',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: shadTheme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (_copied) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.check, size: 12, color: colorScheme.onPrimaryContainer),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        'Copied',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: colorScheme.onPrimaryContainer,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
                             ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          account.accountLabel,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: shadTheme.colorScheme.mutedForeground,
                           ),
-                          Text(
-                            account.accountLabel,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    if (account.shortcutKey != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            account.shortcutKey!,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                  ),
+                  if (account.shortcutKey != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ShadBadge.secondary(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          account.shortcutKey!,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: shadTheme.colorScheme.mutedForeground,
                           ),
                         ),
                       ),
-                    _OtpCountdownBadge(
-                      period: account.period,
-                      fallbackTimeLeft: code.timeLeft,
+                    ),
+                  _OtpCountdownRing(
+                    period: account.period,
+                    fallbackTimeLeft: code.timeLeft,
+                  ),
+                  if (widget.onEdit != null) ...[
+                    const SizedBox(width: 6),
+                    ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      width: 32,
+                      height: 32,
+                      padding: EdgeInsets.zero,
+                      onPressed: widget.onEdit,
+                      child: Icon(
+                        LucideIcons.ellipsisVertical,
+                        size: 16,
+                        color: shadTheme.colorScheme.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    _formatCode(code.code),
+                    style: AppTheme.codeStyle(
+                      color: shadTheme.colorScheme.foreground,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  ShadButton.outline(
+                    size: ShadButtonSize.sm,
+                    onPressed: () => _copyCode(context),
+                    leading: Icon(
+                      _copied ? LucideIcons.check : LucideIcons.copy,
+                      size: 14,
+                      color: _copied ? shadTheme.colorScheme.primary : shadTheme.colorScheme.foreground,
+                    ),
+                    child: Text(
+                      _copied ? 'Copied' : 'Copy',
+                      style: TextStyle(
+                        color: _copied ? shadTheme.colorScheme.primary : shadTheme.colorScheme.foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _OtpProgressBar(
+                period: account.period,
+                fallbackTimeLeft: code.timeLeft,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactCard(
+    BuildContext context,
+    ShadThemeData shadTheme,
+    bool isDark,
+  ) {
+    final account = widget.item.account;
+    final code = widget.item.code;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: ShadCard(
+        radius: BorderRadius.circular(AppTheme.radiusSm),
+        backgroundColor: shadTheme.colorScheme.card,
+        border: ShadBorder.all(
+          color: shadTheme.colorScheme.border,
+          width: 1,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _copyCode(context),
+          onLongPress: widget.onEdit,
+          child: Row(
+            children: [
+              _buildAvatar(shadTheme, account.issuer, size: 36),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.issuer,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: shadTheme.colorScheme.foreground,
+                      ),
+                    ),
+                    Text(
+                      _formatCode(code.code),
+                      style: AppTheme.codeStyle(
+                        color: shadTheme.colorScheme.foreground,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  _formatCode(code.code),
-                  style: AppTheme.codeStyle(color: colorScheme.onSurface),
-                ),
-                const SizedBox(height: 12),
-                _OtpProgressBar(
-                  period: account.period,
-                  fallbackTimeLeft: code.timeLeft,
-                ),
-              ],
-            ),
+              ),
+              _OtpCountdownRing(
+                period: account.period,
+                fallbackTimeLeft: code.timeLeft,
+                size: 26,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactCard(BuildContext context, ColorScheme colorScheme) {
-    final account = widget.item.account;
-    final code = widget.item.code;
-    final isDark = colorScheme.brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCardSurface : AppTheme.lightCardSurface,
+  Widget _buildAvatar(
+    ShadThemeData shadTheme,
+    String issuer, {
+    double size = 40,
+  }) {
+    final char = issuer.isNotEmpty ? issuer[0].toUpperCase() : '?';
+    return ShadAvatar(
+      null,
+      size: Size.square(size),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusSm),
       ),
-      child: ListTile(
-        onTap: () => _copyCode(context),
-        onLongPress: widget.onEdit,
-        leading: _buildAvatar(colorScheme, account.issuer),
-        title: Text(
-          account.issuer,
-          style: TextStyle(fontWeight: FontWeight.w600, color: colorScheme.onSurface),
-        ),
-        subtitle: Text(
-          _formatCode(code.code),
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w700,
-            color: colorScheme.primary,
-            letterSpacing: 1.5,
-          ),
-        ),
-        trailing: _OtpCountdownBadge(
-          period: account.period,
-          fallbackTimeLeft: code.timeLeft,
-          isCompact: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAvatar(ColorScheme colorScheme, String issuer) {
-    final char = issuer.isNotEmpty ? issuer[0].toUpperCase() : '?';
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            colorScheme.primary.withAlpha(180),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(
-          char,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: colorScheme.onPrimary,
-          ),
+      backgroundColor: shadTheme.colorScheme.primary,
+      placeholder: Text(
+        char,
+        style: TextStyle(
+          fontSize: size * 0.42,
+          fontWeight: FontWeight.w700,
+          color: shadTheme.colorScheme.primaryForeground,
         ),
       ),
     );
   }
 
   String _formatCode(String code) {
-    if (code.length <= 3) return code;
-    return '${code.substring(0, 3)} ${code.substring(3)}';
+    if (code.length == 6) {
+      return '${code.substring(0, 3)} ${code.substring(3)}';
+    } else if (code.length == 8) {
+      return '${code.substring(0, 4)} ${code.substring(4)}';
+    } else if (code.length > 3) {
+      final mid = (code.length / 2).ceil();
+      return '${code.substring(0, mid)} ${code.substring(mid)}';
+    }
+    return code;
   }
 }
 
-class _OtpCountdownBadge extends ConsumerWidget {
+class _OtpCountdownRing extends ConsumerWidget {
   final int period;
   final int fallbackTimeLeft;
-  final bool isCompact;
+  final double size;
 
-  const _OtpCountdownBadge({
+  const _OtpCountdownRing({
     required this.period,
     required this.fallbackTimeLeft,
-    this.isCompact = false,
+    this.size = 32,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tickerAsync = ref.watch(totpTickerProvider);
-    final currentSecond = tickerAsync.valueOrNull ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final currentSecond = tickerAsync.valueOrNull ??
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000);
     final timeLeft = calculateTimeLeft(period, currentSecond);
     final progress = calculateProgressFraction(period, currentSecond);
     final isUrgent = timeLeft <= 5;
-    final colorScheme = Theme.of(context).colorScheme;
+    final shadTheme = ShadTheme.maybeOf(context) ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.shadThemeDark(
+                seedColor: Theme.of(context).colorScheme.primary,
+              )
+            : AppTheme.shadThemeLight(
+                seedColor: Theme.of(context).colorScheme.primary,
+              ));
 
-    if (isCompact) {
-      return SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          value: progress,
-          strokeWidth: 2.5,
-          color: isUrgent ? colorScheme.error : colorScheme.primary,
-          backgroundColor: colorScheme.surfaceContainerHighest,
-        ),
-      );
-    }
+    final urgentColor = shadTheme.colorScheme.destructive;
+    final ringColor = isUrgent ? urgentColor : shadTheme.colorScheme.primary;
+    final trackColor = shadTheme.colorScheme.muted;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isUrgent
-            ? colorScheme.error.withAlpha(30)
-            : colorScheme.primary.withAlpha(20),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        '${timeLeft}s',
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: isUrgent ? colorScheme.error : colorScheme.primary,
-        ),
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size(size, size),
+            painter: _CountdownRingPainter(
+              progress: progress,
+              ringColor: ringColor,
+              trackColor: trackColor,
+            ),
+          ),
+          Text(
+            '$timeLeft',
+            style: TextStyle(
+              fontSize: size * 0.36,
+              fontWeight: FontWeight.w700,
+              color: ringColor,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _CountdownRingPainter extends CustomPainter {
+  final double progress;
+  final Color ringColor;
+  final Color trackColor;
+
+  _CountdownRingPainter({
+    required this.progress,
+    required this.ringColor,
+    required this.trackColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - 2.5) / 2;
+
+    final trackPaint = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    final sweepAngle = 2 * math.pi * progress.clamp(0.0, 1.0);
+    final ringPaint = Paint()
+      ..color = ringColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      sweepAngle,
+      false,
+      ringPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CountdownRingPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.ringColor != ringColor ||
+      oldDelegate.trackColor != trackColor;
 }
 
 class _OtpProgressBar extends ConsumerWidget {
@@ -371,33 +476,27 @@ class _OtpProgressBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tickerAsync = ref.watch(totpTickerProvider);
-    final currentSecond = tickerAsync.valueOrNull ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final currentSecond = tickerAsync.valueOrNull ??
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000);
     final timeLeft = calculateTimeLeft(period, currentSecond);
     final progress = calculateProgressFraction(period, currentSecond);
     final isUrgent = timeLeft <= 5;
-    final colorScheme = Theme.of(context).colorScheme;
+    final shadTheme = ShadTheme.maybeOf(context) ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.shadThemeDark(
+                seedColor: Theme.of(context).colorScheme.primary,
+              )
+            : AppTheme.shadThemeLight(
+                seedColor: Theme.of(context).colorScheme.primary,
+              ));
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(3),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Stack(
-          children: [
-            Container(
-              height: 4,
-              color: colorScheme.surfaceContainerHighest,
-            ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 4,
-              width: constraints.maxWidth * progress,
-              decoration: BoxDecoration(
-                color: isUrgent ? colorScheme.error : colorScheme.primary,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ShadProgress(
+      value: progress.clamp(0.0, 1.0),
+      minHeight: 4.0,
+      color: isUrgent
+          ? shadTheme.colorScheme.destructive
+          : shadTheme.colorScheme.primary,
+      backgroundColor: shadTheme.colorScheme.muted,
     );
   }
 }

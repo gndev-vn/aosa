@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 
 class HomeSearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -16,65 +19,40 @@ class HomeSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        height: 36,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 10),
-            Icon(
-              Icons.search_rounded,
-              size: 16,
-              color: colorScheme.onSurfaceVariant.withAlpha(150),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  inputDecorationTheme: const InputDecorationTheme(
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                child: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Search accounts...',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colorScheme.onSurface,
-                  ),
-                  onChanged: onChanged,
-                ),
-              ),
-            ),
-            if (searchQuery.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.clear, size: 14),
-                onPressed: onClear,
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
+
+    final input = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: ShadInput(
+        controller: controller,
+        placeholder: const Text('Search accounts...'),
+        leading: const Icon(LucideIcons.search, size: 16),
+        trailing: searchQuery.isNotEmpty
+            ? ShadButton.ghost(
+                width: 24,
+                height: 24,
                 padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints(minWidth: 28, minHeight: 28),
-              ),
-            const SizedBox(width: 4),
-          ],
-        ),
+                onPressed: onClear,
+                child: const Icon(LucideIcons.x, size: 14),
+              )
+            : null,
+        onChanged: onChanged,
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: input,
+      );
+    }
+    return input;
   }
 }
+

@@ -1,6 +1,9 @@
 import 'package:aosa/domain/usecases/totp_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import 'aosa_input.dart';
 
 class OtpFormData {
   final String issuer;
@@ -94,8 +97,6 @@ class OtpFormState extends State<OtpForm> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onValidChanged?.call(canSave);
     });
@@ -110,21 +111,21 @@ class OtpFormState extends State<OtpForm> {
               controller: _issuerCtrl,
               label: 'Issuer',
               hint: 'e.g. Google, GitHub',
-              icon: Icons.business,
+              icon: LucideIcons.building2,
               onChanged: (_) => _onChanged(),
             ),
             _buildTextField(
               controller: _labelCtrl,
               label: 'Account Label',
               hint: 'e.g. user@gmail.com',
-              icon: Icons.person_outline,
+              icon: LucideIcons.user,
               onChanged: (_) => _onChanged(),
             ),
             _buildTextField(
               controller: _secretCtrl,
               label: 'Secret Key (Base32)',
               hint: 'e.g. JBSWY3DPEHPK3PXP',
-              icon: Icons.key,
+              icon: LucideIcons.keyRound,
               errorText: _secretError,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z2-7=]')),
@@ -140,8 +141,9 @@ class OtpFormState extends State<OtpForm> {
               child: Text(
                 'The secret key is usually a 16-32 character Base32 string. '
                 'You can find it when setting up 2FA on the service website.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: ShadTheme.of(context).colorScheme.mutedForeground,
                 ),
               ),
             ),
@@ -152,17 +154,23 @@ class OtpFormState extends State<OtpForm> {
   }
 
   Widget _buildSection(String title, List<Widget> children) {
-    final theme = Theme.of(context);
+    final shadTheme = ShadTheme.maybeOf(context);
+    final isDark = shadTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final muted = shadTheme?.colorScheme.mutedForeground ??
+        (isDark ? AppTheme.darkMuted : AppTheme.lightMuted);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 8),
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             title,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.primary,
+            style: TextStyle(
+              fontSize: 13,
               fontWeight: FontWeight.w600,
+              color: muted,
             ),
           ),
         ),
@@ -183,18 +191,13 @@ class OtpFormState extends State<OtpForm> {
     ValueChanged<String>? onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 6),
-      child: TextField(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: AosaInput(
         controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: Icon(icon),
-          errorText: errorText,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        label: label,
+        hint: hint,
+        leadingIcon: icon,
+        errorText: errorText,
         maxLines: maxLines,
         textInputAction: textInputAction,
         inputFormatters: inputFormatters,

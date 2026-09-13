@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:shadcn_ui/shadcn_ui.dart';
+
 import '../widgets/corner_bracket_painter.dart';
+import '../widgets/loading_indicator.dart';
 import '../widgets/overlay_painter.dart';
 import '../widgets/qr_action.dart';
 
@@ -83,30 +86,22 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                 bottom: 12,
               ),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withAlpha(200),
-                    Colors.transparent,
-                  ],
+                color: Colors.black.withAlpha(220),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withAlpha(25),
+                    width: 1,
+                  ),
                 ),
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(30),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          size: 20, color: Colors.white),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      padding: EdgeInsets.zero,
-                    ),
+                  ShadButton.outline(
+                    width: 36,
+                    height: 36,
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Icon(LucideIcons.x, size: 18, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   const Text(
@@ -143,8 +138,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                         padding: const EdgeInsets.only(bottom: 12),
                         child: QrAction(
                           icon: isOn
-                              ? Icons.flash_on_rounded
-                              : Icons.flash_off_rounded,
+                              ? LucideIcons.zap
+                              : LucideIcons.zapOff,
                           label: isOn ? 'Flash off' : 'Flash on',
                           onPressed: () => _cameraController.toggleTorch(),
                         ),
@@ -152,13 +147,13 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                     },
                   ),
                   QrAction(
-                    icon: Icons.photo_library_rounded,
+                    icon: LucideIcons.image,
                     label: 'Pick from gallery',
                     onPressed: _pickFromGallery,
                   ),
                   const SizedBox(height: 12),
                   QrAction(
-                    icon: Icons.edit_rounded,
+                    icon: LucideIcons.pencil,
                     label: 'Enter key manually',
                     onPressed: () => widget.onScan(
                       'otpauth://totp/Manual:placeholder?secret=',
@@ -173,14 +168,7 @@ class _QrScannerScreenState extends State<QrScannerScreen>
             Container(
               color: Colors.black54,
               child: const Center(
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: Colors.white,
-                  ),
-                ),
+                child: AosaLoadingIndicator(size: 32),
               ),
             ),
         ],
@@ -243,13 +231,8 @@ class _QrScannerScreenState extends State<QrScannerScreen>
                       width: scanAreaSize - 12,
                       height: 2,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            colorScheme.primary.withAlpha(0),
-                            colorScheme.primary,
-                            colorScheme.primary.withAlpha(0),
-                          ],
-                        ),
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(1),
                       ),
                     ),
                   );

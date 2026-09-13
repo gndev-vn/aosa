@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../data/encryption/crypto_service.dart';
 import 'pin_widgets.dart';
@@ -108,18 +109,27 @@ class _PinSetupDialogState extends State<PinSetupDialog> {
   }
 
   Widget _buildSuccess() {
-    final cs = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
+    final shadTheme = ShadTheme.maybeOf(context);
+    final primary = shadTheme?.colorScheme.primary ??
+        Theme.of(context).colorScheme.primary;
+    final primaryFg = shadTheme?.colorScheme.primaryForeground ?? Colors.white;
+    final mutedFg = shadTheme?.colorScheme.mutedForeground ??
+        Theme.of(context).colorScheme.onSurfaceVariant;
+
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 72, height: 72,
-        decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(20)),
-        child: Icon(Icons.check_circle_outline_rounded, size: 40, color: cs.primary),
+      ShadAvatar(
+        null,
+        size: const Size.square(64),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        backgroundColor: primary,
+        placeholder: Icon(LucideIcons.check, size: 32, color: primaryFg),
       ),
       const SizedBox(height: 16),
       Text(
         switch (widget.mode) { PinSetupMode.create => 'Your new PIN has been set.', PinSetupMode.change => 'Your PIN has been updated.', PinSetupMode.remove => 'Your PIN has been removed.' },
-        style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+        style: TextStyle(fontSize: 14, color: mutedFg),
       ),
     ]);
   }

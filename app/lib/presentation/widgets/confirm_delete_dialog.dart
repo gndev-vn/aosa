@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'confirmation_bottom_sheet.dart';
 
 Future<bool> showConfirmDeleteDialog(
@@ -8,7 +9,7 @@ Future<bool> showConfirmDeleteDialog(
 }) {
   return showConfirmationBottomSheet(
     context,
-    icon: Icons.delete_outline_rounded,
+    icon: LucideIcons.trash2,
     title: 'Delete Account',
     message: (accountLabel != null && accountLabel.isNotEmpty)
         ? 'Remove $issuer ($accountLabel)? This cannot be undone.'

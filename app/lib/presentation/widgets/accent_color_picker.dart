@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../presentation/providers/settings_provider.dart';
 import 'standard_bottom_sheet.dart';
 
@@ -10,85 +12,71 @@ class AccentColorPicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentColor = ref.watch(settingsProvider.select((s) => s.seedColor));
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final shadTheme = ShadTheme.of(context);
 
     return StandardBottomSheet(
       title: 'Accent Color',
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Center(
           child: Wrap(
-            spacing: 14,
-            runSpacing: 14,
+            spacing: 16,
+            runSpacing: 16,
             alignment: WrapAlignment.center,
-              children: _seedColors.map((color) {
-                final selected = color.toARGB32() == currentColor;
-                return GestureDetector(
-                  onTap: () {
-                    ref.read(settingsProvider.notifier).setSeedColor(color.toARGB32());
-                    Navigator.of(context).pop();
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: selected
-                          ? Border.all(
-                              color: colorScheme.onSurface,
-                              width: 3,
-                            )
-                          : Border.all(
-                              color: colorScheme.outlineVariant,
-                              width: 1,
-                            ),
-                      boxShadow: selected
-                          ? [
-                              BoxShadow(
-                                color: color.withAlpha(80),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : null,
+            children: _seedColors.map((color) {
+              final selected = color.toARGB32() == currentColor;
+              return GestureDetector(
+                onTap: () {
+                  ref.read(settingsProvider.notifier).setSeedColor(color.toARGB32());
+                  Navigator.of(context).pop();
+                },
+                child: ShadAvatar(
+                  null,
+                  size: const Size.square(44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                    side: BorderSide(
+                      color: selected
+                          ? shadTheme.colorScheme.foreground
+                          : shadTheme.colorScheme.border,
+                      width: selected ? 2.5 : 1,
                     ),
-                    child: selected
-                        ? Icon(
-                            Icons.check_rounded,
-                            size: 22,
-                            color: color.computeLuminance() > 0.5
-                                ? Colors.black87
-                                : Colors.white,
-                          )
-                        : null,
                   ),
-                );
-              }).toList(),
-            ),
+                  backgroundColor: color,
+                  placeholder: selected
+                      ? Icon(
+                          LucideIcons.check,
+                          size: 20,
+                          color: color.computeLuminance() > 0.4
+                              ? const Color(0xFF09090B)
+                              : const Color(0xFFFAFAFA),
+                        )
+                      : null,
+                ),
+              );
+            }).toList(),
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
 const _seedColors = [
-  Color(0xff1976d2), // Blue
-  Color(0xff1565c0), // Dark blue
-  Color(0xff0d47a1), // Navy
-  Color(0xff00838f), // Teal
-  Color(0xff00796b), // Green
-  Color(0xff2e7d32), // Dark green
-  Color(0xff558b2f), // Light green
-  Color(0xfff9a825), // Yellow
-  Color(0xffff8f00), // Amber
-  Color(0xffef6c00), // Orange
-  Color(0xffd84315), // Deep orange
-  Color(0xffc62828), // Red
-  Color(0xffad1457), // Pink
-  Color(0xff6a1b9a), // Purple
-  Color(0xff4a148c), // Deep purple
-  Color(0xff37474f), // Blue grey
+  Color(0xFF3B82F6), // Blue
+  Color(0xFF6366F1), // Indigo
+  Color(0xFF8B5CF6), // Violet
+  Color(0xFFEC4899), // Pink
+  Color(0xFFF43F5E), // Rose
+  Color(0xFFEF4444), // Red
+  Color(0xFFF97316), // Orange
+  Color(0xFFF59E0B), // Amber
+  Color(0xFF10B981), // Emerald
+  Color(0xFF14B8A6), // Teal
+  Color(0xFF06B6D4), // Cyan
+  Color(0xFF71717A), // Zinc / Slate
+  Color(0xFF0D47A1), // Navy
+  Color(0xFF2E7D32), // Forest Green
+  Color(0xFF4A148C), // Deep Purple
+  Color(0xFF37474F), // Blue Grey
 ];

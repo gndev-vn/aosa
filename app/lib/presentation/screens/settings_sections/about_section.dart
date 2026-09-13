@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../widgets/aosa_widgets.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../widgets/settings_helpers.dart';
 
 class AboutSection extends StatelessWidget {
@@ -8,39 +9,37 @@ class AboutSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final shadTheme = ShadTheme.maybeOf(context);
+    final isDark = shadTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
+    final primary = shadTheme?.colorScheme.primary ?? cs.primary;
+    final primaryFg = shadTheme?.colorScheme.primaryForeground ?? cs.onPrimary;
+    final mutedFg = shadTheme?.colorScheme.mutedForeground ??
+        (isDark ? AppTheme.darkMuted : AppTheme.lightMuted);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'About'),
-        AosaCard(
+        ShadCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               SettingsRow(
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primary,
-                        colorScheme.primary.withAlpha(180),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
+                leading: ShadAvatar(
+                  null,
+                  size: const Size.square(28),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   ),
-                  child: Center(
-                    child: Text(
-                      'A',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onPrimary,
-                      ),
+                  backgroundColor: primary,
+                  placeholder: Text(
+                    'A',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: primaryFg,
                     ),
                   ),
                 ),
@@ -49,29 +48,26 @@ class AboutSection extends StatelessWidget {
               ),
               const ThinDivider(),
               SettingsRow(
-                leading: IconBox(
-                  icon: Icons.code_rounded,
-                  color: colorScheme.surfaceContainerHighest,
-                ),
+                leading: const IconBox(icon: LucideIcons.code),
                 title: 'License',
                 trailing: Text(
                   'MIT',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurfaceVariant,
+                    color: mutedFg,
                   ),
                 ),
               ),
               const ThinDivider(),
               SettingsRow(
-                leading: IconBox(
-                  icon: Icons.open_in_new_rounded,
-                  color: colorScheme.surfaceContainerHighest,
-                ),
+                leading: const IconBox(icon: LucideIcons.externalLink),
                 title: 'Source code',
-                trailing: Icon(Icons.chevron_right,
-                    size: 18, color: colorScheme.onSurfaceVariant),
+                trailing: Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: mutedFg,
+                ),
               ),
             ],
           ),

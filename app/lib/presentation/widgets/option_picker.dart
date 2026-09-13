@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 import 'standard_bottom_sheet.dart';
 
 Future<String?> showOptionPickerSheet(
@@ -34,52 +38,72 @@ class OptionPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return StandardBottomSheet(
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
+
+    final sheet = StandardBottomSheet(
       title: title.isEmpty ? 'Select Option' : title,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (label, value) in options)
-            InkWell(
-              onTap: () => onSelected(value),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      value == selected
-                          ? Icons.check_circle_rounded
-                          : Icons.circle_outlined,
-                      size: 20,
-                      color: value == selected
-                          ? cs.primary
-                          : cs.outlineVariant,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: value == selected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: cs.onSurface,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+              child: (value == selected)
+                  ? ShadButton.secondary(
+                      width: double.infinity,
+                      height: 44,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        onSelected(value);
+                      },
+                      trailing: const Icon(LucideIcons.check, size: 16),
+                      child: Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: theme.colorScheme.foreground,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ShadButton.ghost(
+                      width: double.infinity,
+                      height: 44,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        onSelected(value);
+                      },
+                      child: Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: theme.colorScheme.foreground,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
         ],
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: sheet,
+      );
+    }
+    return sheet;
   }
 }

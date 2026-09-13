@@ -2,11 +2,15 @@ import 'package:aosa/data/repositories/otp_repository_impl.dart';
 import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/domain/usecases/otpauth_parser.dart';
 import 'package:aosa/presentation/screens/qr_scanner_screen.dart';
+import 'package:aosa/presentation/widgets/aosa_input.dart';
 import 'package:aosa/presentation/widgets/otp_form.dart';
 import 'package:aosa/presentation/widgets/standard_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../core/theme/app_theme.dart';
 
 enum AddOtpMode { form, scan, uri }
 
@@ -59,19 +63,79 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
 
   @override
   Widget build(BuildContext context) {
-    return StandardBottomSheet(
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
+
+    final sheet = StandardBottomSheet(
       title: 'Add account',
       useSafeArea: false,
       isScrollControlled: true,
       confirmLabel: 'Save',
       onConfirm: _formValid ? () => _otpFormKey.currentState?.save() : null,
-      child: OtpForm(
-        key: _otpFormKey,
-        initialData: _formData,
-        onValidChanged: (valid) => setState(() => _formValid = valid),
-        onSave: (data) => _saveAccount(data),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ShadButton.outline(
+                  height: 40,
+                  onPressed: _openScanner,
+                  leading: Icon(
+                    LucideIcons.qrCode,
+                    size: 16,
+                    color: theme.colorScheme.foreground,
+                  ),
+                  child: const Text('Scan QR'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ShadButton.outline(
+                  height: 40,
+                  onPressed: _showPasteUriDialog,
+                  leading: Icon(
+                    LucideIcons.link,
+                    size: 16,
+                    color: theme.colorScheme.foreground,
+                  ),
+                  child: const Text('Paste URI'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          OtpForm(
+            key: _otpFormKey,
+            initialData: _formData,
+            onValidChanged: (valid) => setState(() => _formValid = valid),
+            onSave: (data) => _saveAccount(data),
+          ),
+          const SizedBox(height: 12),
+          ShadButton(
+            width: double.infinity,
+            height: 48,
+            enabled: _formValid,
+            onPressed: _formValid ? () => _otpFormKey.currentState?.save() : null,
+            child: const Text('Add Account'),
+          ),
+        ],
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: sheet,
+      );
+    }
+    return sheet;
   }
 
   void _openScanner() {
@@ -126,11 +190,11 @@ class _AddOtpSheetContentState extends ConsumerState<_AddOtpSheetContent> {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: TextField(
+          child: AosaInput(
             controller: controller,
-            decoration: const InputDecoration(
-              hintText: 'otpauth://totp/...',
-            ),
+            label: 'Key URI',
+            hint: 'otpauth://totp/Example:alice?secret=JBSWY3DPEHPK3PXP...',
+            leadingIcon: LucideIcons.link,
             maxLines: 3,
             autofocus: true,
           ),

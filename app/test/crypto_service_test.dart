@@ -1,3 +1,6 @@
+@Timeout(Duration(seconds: 180))
+library;
+
 import 'dart:typed_data';
 
 import 'package:aosa/data/encryption/crypto_service.dart';

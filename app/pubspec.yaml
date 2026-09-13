@@ -45,6 +45,7 @@ dependencies:
   flutter_local_notifications: ^22.3.0
 
   # UI
+  shadcn_ui: ^0.56.3
   flutter_animate: ^4.5.0
   shimmer: ^4.0.0
   google_fonts: ^8.2.1

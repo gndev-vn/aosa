@@ -5,7 +5,9 @@ import 'package:aosa/presentation/screens/edit_otp_screen.dart';
 import 'package:aosa/presentation/screens/home_screen.dart';
 import 'package:aosa/presentation/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 class AppScaffold extends ConsumerWidget {
   const AppScaffold({super.key});
@@ -15,6 +17,9 @@ class AppScaffold extends ConsumerWidget {
     final nav = ref.watch(navigationProvider);
     final repo = ref.watch(otpRepositoryProvider);
 
+    final shadTheme = ShadTheme.of(context);
+    final isDark = shadTheme.brightness == Brightness.dark;
+
     final screen = switch (nav.currentScreen) {
       AppScreen.home => const HomeScreen(),
       AppScreen.settings => const SettingsScreen(),
@@ -23,43 +28,50 @@ class AppScaffold extends ConsumerWidget {
           : const HomeScreen(),
     };
 
-    return PopScope(
-      canPop: nav.currentScreen == AppScreen.home,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          ref.read(navigationProvider.notifier).goToHome();
-        }
-      },
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.06),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ),),
-            child: FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.93, end: 1.0).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutBack,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: shadTheme.colorScheme.background,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: shadTheme.colorScheme.background,
+        body: PopScope(
+          canPop: nav.currentScreen == AppScreen.home,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop) {
+              ref.read(navigationProvider.notifier).goToHome();
+            }
+          },
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.02),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
                   ),
+                  child: child,
                 ),
-                child: child,
-              ),
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey(nav.currentScreen),
+              child: screen,
             ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey(nav.currentScreen),
-          child: screen,
+          ),
         ),
       ),
     );

@@ -3,11 +3,15 @@ import 'package:aosa/domain/entities/otp_account.dart';
 import 'package:aosa/domain/usecases/totp_engine.dart';
 import 'package:aosa/presentation/providers/navigation_provider.dart';
 import 'package:aosa/presentation/providers/otp_list_provider.dart';
-import 'package:aosa/presentation/widgets/aosa_widgets.dart';
+import 'package:aosa/presentation/widgets/aosa_input.dart';
 import 'package:aosa/presentation/widgets/confirm_delete_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../widgets/loading_indicator.dart';
 
 class EditOtpScreen extends ConsumerStatefulWidget {
   final OtpRepositoryImpl repository;
@@ -70,14 +74,21 @@ class _EditOtpScreenState extends ConsumerState<EditOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final shadTheme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
 
-    return Scaffold(
+    final scaffold = Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            _buildHeader(cs),
+            _buildHeader(shadTheme),
             // Content
             Expanded(
               child: SingleChildScrollView(
@@ -86,41 +97,55 @@ class _EditOtpScreenState extends ConsumerState<EditOtpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // OTP Preview card
-                    _buildOtpPreview(cs),
+                    _buildOtpPreview(shadTheme),
                     const SizedBox(height: 24),
 
                     // Account details card (Issuer + Account + Secret)
-                    _buildDetailsCard(cs),
+                    _buildDetailsCard(shadTheme),
                     const SizedBox(height: 32),
 
                     // Delete button
-                    _buildDeleteButton(cs),
+                    _buildDeleteButton(shadTheme),
                   ],
                 ),
               ),
             ),
 
             // Save button
-            _buildSaveBar(cs),
+            _buildSaveBar(shadTheme),
           ],
         ),
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: scaffold,
+      );
+    }
+    return scaffold;
   }
 
-  Widget _buildHeader(ColorScheme cs) {
+  Widget _buildHeader(ShadThemeData shadTheme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
       child: Row(
         children: [
-          aosaBackButton(context),
+          ShadButton.outline(
+            width: 36,
+            height: 36,
+            padding: EdgeInsets.zero,
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Icon(LucideIcons.arrowLeft, size: 16),
+          ),
           const Spacer(),
           Text(
             'Edit account',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: cs.onSurface,
+              color: shadTheme.colorScheme.foreground,
             ),
           ),
           const Spacer(),
@@ -130,65 +155,46 @@ class _EditOtpScreenState extends ConsumerState<EditOtpScreen> {
     );
   }
 
-  Widget _buildOtpPreview(ColorScheme cs) {
+  Widget _buildOtpPreview(ShadThemeData shadTheme) {
     final items = ref.watch(otpListProvider);
     final item = items.where((e) => e.account.id == account.id).firstOrNull;
     final code = item?.code.code ?? '------';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [cs.primaryContainer, cs.primaryContainer.withAlpha(180)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return ShadCard(
+      padding: const EdgeInsets.symmetric(vertical: 22),
       child: Center(
         child: Text(
-          code,
-          style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 6,
-            fontFamily: 'monospace',
-            color: cs.onPrimaryContainer,
-          ),
+          code.length == 6
+              ? '${code.substring(0, 3)} ${code.substring(3)}'
+              : code,
+          style: AppTheme.codeStyle(color: shadTheme.colorScheme.foreground),
         ),
       ),
     );
   }
 
-  Widget _buildDetailsCard(ColorScheme cs) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Column(
-        children: [
-          _buildField(
-            controller: _issuerCtrl,
-            label: 'Issuer',
-            hint: 'e.g. Google, GitHub',
-            icon: Icons.business_outlined,
-            onChanged: (_) => setState(() {}),
-          ),
-          Divider(height: 1, color: cs.outlineVariant.withAlpha(60), indent: 52),
-          _buildField(
-            controller: _labelCtrl,
-            label: 'Account',
-            hint: 'e.g. user@gmail.com',
-            icon: Icons.person_outline_rounded,
-            onChanged: (_) => setState(() {}),
-          ),
-          Divider(height: 1, color: cs.outlineVariant.withAlpha(60), indent: 52),
-          _buildSecretField(cs),
-        ],
-      ),
+  Widget _buildDetailsCard(ShadThemeData shadTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildField(
+          controller: _issuerCtrl,
+          label: 'Issuer',
+          hint: 'e.g. Google, GitHub',
+          icon: LucideIcons.building2,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 14),
+        _buildField(
+          controller: _labelCtrl,
+          label: 'Account label',
+          hint: 'e.g. user@gmail.com',
+          icon: LucideIcons.user,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 14),
+        _buildSecretField(shadTheme),
+      ],
     );
   }
 
@@ -199,48 +205,23 @@ class _EditOtpScreenState extends ConsumerState<EditOtpScreen> {
     required IconData icon,
     ValueChanged<String>? onChanged,
   }) {
-    final cs = Theme.of(context).colorScheme;
-    return TextField(
+    return AosaInput(
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 20),
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: TextStyle(color: cs.onSurfaceVariant),
-      ),
+      label: label,
+      hint: hint,
+      leadingIcon: icon,
       textInputAction: TextInputAction.next,
       onChanged: onChanged,
     );
   }
 
-  Widget _buildSecretField(ColorScheme cs) {
-    return TextField(
+  Widget _buildSecretField(ShadThemeData shadTheme) {
+    return AosaInput(
       controller: _secretCtrl,
-      decoration: InputDecoration(
-        labelText: 'Secret key',
-        hintText: 'JBSWY3DPEHPK3PXP',
-        errorText: _secretError,
-        prefixIcon: const Icon(Icons.key_rounded, size: 20),
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _secretVisible
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            size: 20,
-          ),
-          onPressed: () {
-            setState(() => _secretVisible = !_secretVisible);
-          },
-        ),
-      ),
+      label: 'Secret key',
+      hint: 'JBSWY3DPEHPK3PXP',
+      errorText: _secretError,
+      leadingIcon: LucideIcons.keyRound,
       obscureText: !_secretVisible,
       textInputAction: TextInputAction.done,
       inputFormatters: [
@@ -251,51 +232,46 @@ class _EditOtpScreenState extends ConsumerState<EditOtpScreen> {
         _validateSecret();
         setState(() {});
       },
+      trailing: GestureDetector(
+        onTap: () => setState(() => _secretVisible = !_secretVisible),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Icon(
+            _secretVisible ? LucideIcons.eyeOff : LucideIcons.eye,
+            size: 16,
+            color: shadTheme.colorScheme.mutedForeground,
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildDeleteButton(ColorScheme cs) {
-    return OutlinedButton(
+  Widget _buildDeleteButton(ShadThemeData shadTheme) {
+    return ShadButton.destructive(
+      width: double.infinity,
+      height: 44,
       onPressed: () => _confirmDelete(context),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: cs.error,
-        side: BorderSide(color: cs.error.withAlpha(80)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-      ),
+      leading: const Icon(LucideIcons.trash2, size: 16),
       child: const Text('Delete account'),
     );
   }
 
-  Widget _buildSaveBar(ColorScheme cs) {
+  Widget _buildSaveBar(ShadThemeData shadTheme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       decoration: BoxDecoration(
-        color: cs.surface,
+        color: shadTheme.colorScheme.background,
         border: Border(
-          top: BorderSide(color: cs.outlineVariant.withAlpha(60)),
+          top: BorderSide(color: shadTheme.colorScheme.border, width: 1),
         ),
       ),
-      child: SizedBox(
+      child: ShadButton(
         width: double.infinity,
         height: 48,
-        child: FilledButton(
-          onPressed: (_canSave && !_isSaving) ? _save : null,
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save changes'),
-        ),
+        onPressed: (_canSave && !_isSaving) ? _save : null,
+        child: _isSaving
+            ? const AosaLoadingIndicator(size: 18)
+            : const Text('Save changes'),
       ),
     );
   }

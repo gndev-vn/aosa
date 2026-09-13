@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../data/api/repo_api.dart';
 import '../../providers/app_init_provider.dart';
 import '../../providers/repo_provider.dart';
+import '../../widgets/aosa_input.dart';
+import '../../widgets/loading_indicator.dart';
 import '../../widgets/standard_bottom_sheet.dart';
 
 class RepoManagerSheet extends ConsumerStatefulWidget {
@@ -48,21 +52,36 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
 
-    return StandardBottomSheet(
+    final sheet = StandardBottomSheet(
       title: 'Repos',
       confirmLabel: 'Add',
       onConfirm: _isLoading ? null : _showCreateDialog,
-      child: _buildContent(cs),
+      child: _buildContent(theme),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: sheet,
+      );
+    }
+    return sheet;
   }
 
-  Widget _buildContent(ColorScheme cs) {
+  Widget _buildContent(ShadThemeData theme) {
     if (_isLoading) {
       return const Padding(
         padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: AosaLoadingIndicator()),
       );
     }
 
@@ -70,7 +89,7 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
       return Padding(
         padding: const EdgeInsets.all(24),
         child: Center(
-          child: Text(_error!, style: TextStyle(color: cs.error)),
+          child: Text(_error!, style: TextStyle(color: theme.colorScheme.destructive)),
         ),
       );
     }
@@ -86,32 +105,72 @@ class _RepoManagerSheetState extends ConsumerState<RepoManagerSheet> {
       mainAxisSize: MainAxisSize.min,
       children: _repos.map((repo) {
         final isActive = repo.id == _activeRepoId;
-        return ListTile(
-          dense: true,
-          leading: Icon(
-            repo.isDefault ? Icons.star : Icons.folder_outlined,
-            color: isActive ? cs.primary : cs.onSurfaceVariant,
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _selectRepo(repo),
+            child: ShadCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: isActive
+                  ? ShadBorder.all(color: theme.colorScheme.primary, width: 1.5)
+                  : null,
+              backgroundColor: isActive
+                  ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                  : null,
+              child: Row(
+                children: [
+                  Icon(
+                    repo.isDefault ? LucideIcons.star : LucideIcons.folder,
+                    size: 18,
+                    color: isActive
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.mutedForeground,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          repo.name,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight:
+                                isActive ? FontWeight.w600 : FontWeight.w500,
+                            color: theme.colorScheme.foreground,
+                          ),
+                        ),
+                        if (repo.isDefault)
+                          Text(
+                            'Default',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.mutedForeground,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (!repo.isDefault)
+                    ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      width: 32,
+                      height: 32,
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _deleteRepo(repo),
+                      child: Icon(
+                        LucideIcons.trash2,
+                        size: 16,
+                        color: theme.colorScheme.destructive,
+                      ),
+                    ),
+                  if (isActive)
+                    Icon(LucideIcons.check, size: 18, color: theme.colorScheme.primary),
+                ],
+              ),
+            ),
           ),
-          title: Text(repo.name),
-          subtitle: repo.isDefault
-              ? Text('Default',
-                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant))
-              : null,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!repo.isDefault)
-                IconButton(
-                  icon: Icon(Icons.delete_outline, size: 18, color: cs.error),
-                  onPressed: () => _deleteRepo(repo),
-                ),
-              if (isActive)
-                Icon(Icons.check_circle, size: 18, color: cs.primary)
-              else
-                Icon(Icons.circle_outlined, size: 18, color: cs.outline),
-            ],
-          ),
-          onTap: () => _selectRepo(repo),
         );
       }).toList(),
     );
@@ -224,12 +283,11 @@ class _CreateRepoSheetState extends State<_CreateRepoSheet> {
       isScrollControlled: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: TextField(
+        child: AosaInput(
           controller: _controller,
-          decoration: const InputDecoration(
-            labelText: 'Repo name',
-            hintText: 'My Vault',
-          ),
+          label: 'Repository name',
+          hint: 'e.g. Personal Vault, Work',
+          leadingIcon: LucideIcons.folder,
           autofocus: true,
           onSubmitted: (_) => _submit(),
         ),

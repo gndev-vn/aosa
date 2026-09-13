@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../domain/entities/app_settings.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/aosa_widgets.dart';
 import '../../widgets/accent_color_picker.dart';
 import '../../widgets/settings_helpers.dart';
 import '../../widgets/standard_bottom_sheet.dart';
@@ -15,18 +15,17 @@ class AppearanceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Appearance'),
-        AosaCard(
+        ShadCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               SettingsRow(
-                leading: const IconBox(icon: Icons.palette_outlined),
+                leading: const IconBox(icon: LucideIcons.palette),
                 title: 'Theme',
                 trailing: SettingsSelector(
                   title: 'Theme',
@@ -48,26 +47,23 @@ class AppearanceSection extends ConsumerWidget {
                 const ThinDivider(),
               if (settings.themeMode != AppThemeMode.dark)
                 SettingsRow(
-                  leading: const IconBox(icon: Icons.colorize_outlined),
+                  leading: const IconBox(icon: LucideIcons.pipette),
                   title: 'Accent color',
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: Color(settings.seedColor),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: colorScheme.outlineVariant,
-                            width: 1.5,
-                          ),
-                        ),
+                      ShadAvatar(
+                        null,
+                        size: const Size.square(24),
+                        shape: const CircleBorder(),
+                        backgroundColor: Color(settings.seedColor),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.chevron_right,
-                          size: 18, color: colorScheme.onSurfaceVariant),
+                      Icon(
+                        LucideIcons.chevronRight,
+                        size: 16,
+                        color: ShadTheme.of(context).colorScheme.mutedForeground,
+                      ),
                     ],
                   ),
                   onTap: () {

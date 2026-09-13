@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../domain/entities/app_settings.dart';
 import '../../providers/settings_provider.dart';
-import '../../widgets/aosa_widgets.dart';
 import '../../widgets/pin_setup_dialog.dart';
 import '../../widgets/settings_helpers.dart';
 
@@ -19,15 +19,15 @@ class SecuritySection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Security'),
-        AosaCard(
+        ShadCard(
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               SettingsRow(
-                leading: const IconBox(icon: Icons.lock_outline_rounded),
+                leading: const IconBox(icon: LucideIcons.lock),
                 title: 'PIN Lock',
                 subtitle: 'Require PIN to open the app',
-                trailing: AosaSwitch(
+                trailing: ShadSwitch(
                   value: settings.pinEnabled,
                   onChanged: (v) => _handlePinToggle(context, ref, v),
                 ),
@@ -35,10 +35,10 @@ class SecuritySection extends ConsumerWidget {
               if (settings.pinEnabled) const ThinDivider(),
               if (settings.pinEnabled)
                 SettingsRow(
-                  leading: const IconBox(icon: Icons.fingerprint),
+                  leading: const IconBox(icon: LucideIcons.fingerprint),
                   title: 'Biometric',
                   subtitle: 'Use fingerprint or face unlock',
-                  trailing: AosaSwitch(
+                  trailing: ShadSwitch(
                     value: settings.biometricEnabled,
                     onChanged: (v) => _handleBiometricToggle(context, ref, v),
                   ),
@@ -46,7 +46,7 @@ class SecuritySection extends ConsumerWidget {
               if (settings.pinEnabled) const ThinDivider(),
               if (settings.pinEnabled)
                 SettingsRow(
-                  leading: const IconBox(icon: Icons.timer_outlined),
+                  leading: const IconBox(icon: LucideIcons.timer),
                   title: 'Auto-lock timeout',
                   trailing: SettingsSelector(
                     title: 'Auto-lock timeout',

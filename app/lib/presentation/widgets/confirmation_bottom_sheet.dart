@@ -1,6 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 
 Future<bool> showConfirmationBottomSheet(
   BuildContext context, {
@@ -66,23 +69,43 @@ class ConfirmationBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final media = MediaQuery.of(context);
-    final bottomInset = max(media.viewPadding.bottom, media.viewInsets.bottom) + 16.0;
+    final bottomInset =
+        max(media.viewPadding.bottom, media.viewInsets.bottom) + 16.0;
+
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: cs.primary)
+            : AppTheme.shadThemeLight(seedColor: cs.primary));
+    final cardColor = theme.colorScheme.card;
+    final borderColor = theme.colorScheme.border;
 
     final badgeBg = iconBackgroundColor ??
-        (isDestructive ? cs.errorContainer : cs.primaryContainer);
+        (isDestructive
+            ? theme.colorScheme.destructive.withValues(alpha: 0.1)
+            : theme.colorScheme.primary.withValues(alpha: 0.1));
     final badgeFg = iconColor ??
-        (isDestructive ? cs.onErrorContainer : cs.onPrimaryContainer);
+        (isDestructive ? theme.colorScheme.destructive : theme.colorScheme.primary);
 
-    return ConstrainedBox(
+    final sheet = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 640),
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 0, 16, bottomInset),
         child: Material(
-          color: cs.surface,
+          color: cardColor,
           borderRadius: BorderRadius.circular(28),
           clipBehavior: Clip.antiAlias,
-          elevation: 6,
-          child: Padding(
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: borderColor,
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(28),
+            ),
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -92,29 +115,31 @@ class ConfirmationBottomSheet extends StatelessWidget {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: cs.onSurfaceVariant.withAlpha(80),
-                      borderRadius: BorderRadius.circular(2),
+                      color: borderColor,
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.radiusPill),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(16),
+                ShadAvatar(
+                  null,
+                  size: const Size.square(56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                   ),
-                  child: Icon(icon, size: 28, color: badgeFg),
+                  backgroundColor: badgeBg,
+                  placeholder: Icon(icon, size: 28, color: badgeFg),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: cs.onSurface,
+                    letterSpacing: -0.2,
+                    color: theme.colorScheme.foreground,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -123,54 +148,34 @@ class ConfirmationBottomSheet extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: cs.onSurfaceVariant,
                     height: 1.4,
+                    color: theme.colorScheme.mutedForeground,
                   ),
                 ),
                 const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: onCancel ?? () => Navigator.of(context).pop(false),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          side: BorderSide(color: cs.outlineVariant),
-                        ),
-                        child: Text(
-                          cancelLabel,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
-                        ),
+                      child: ShadButton.outline(
+                        onPressed: onCancel ??
+                            () => Navigator.of(context).pop(false),
+                        height: 44,
+                        child: Text(cancelLabel),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: FilledButton(
-                        onPressed: onConfirm,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          backgroundColor: isDestructive ? cs.error : cs.primary,
-                          foregroundColor: isDestructive ? cs.onError : cs.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                        ),
-                        child: Text(
-                          confirmLabel,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      child: isDestructive
+                          ? ShadButton.destructive(
+                              onPressed: onConfirm,
+                              height: 44,
+                              child: Text(confirmLabel),
+                            )
+                          : ShadButton(
+                              onPressed: onConfirm,
+                              height: 44,
+                              child: Text(confirmLabel),
+                            ),
                     ),
                   ],
                 ),
@@ -180,5 +185,13 @@ class ConfirmationBottomSheet extends StatelessWidget {
         ),
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: sheet,
+      );
+    }
+    return sheet;
   }
 }

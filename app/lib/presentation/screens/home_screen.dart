@@ -1,8 +1,9 @@
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../core/theme/app_theme.dart';
 import '../providers/app_init_provider.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/auth_provider.dart';
@@ -28,14 +29,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   OtpListNotifier? _otpNotifier;
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
-  late AnimationController _breathController;
-  late Animation<double> _breathAnimation;
   String? _activeRepoId;
   bool _shownConnectionError = false;
 
@@ -43,24 +42,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _fabController = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _fabAnimation = CurvedAnimation(parent: _fabController, curve: Curves.elasticOut);
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fabAnimation = CurvedAnimation(
+      parent: _fabController,
+      curve: Curves.elasticOut,
+    );
     _fabController.forward();
 
-    // Breathing idle animation for the FAB
-    _breathController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-    _breathAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
-      CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpNotifier = ref.read(otpListProvider.notifier);
       _otpNotifier?.startAutoRefresh();
       _loadActiveRepoId();
     });
   }
+
 
   Future<void> _loadActiveRepoId() async {
     final services = ref.read(appInitProvider);
@@ -82,22 +80,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _showFabMenu(BuildContext context, WidgetRef ref) {
     final repo = ref.read(otpRepositoryProvider);
     if (repo == null) return;
-    final cs = Theme.of(context).colorScheme;
 
     showFabMenu(context, actions: [
       FabMenuAction(
-        icon: Icons.qr_code_scanner_rounded,
-        color: cs.primary,
+        icon: LucideIcons.scanLine,
+        label: 'Scan QR code',
+        isPrimary: true,
         onTap: () => showAddOtpSheet(context, ref, repo, startMode: AddOtpMode.scan),
       ),
       FabMenuAction(
-        icon: Icons.link_rounded,
-        color: cs.secondary,
+        icon: LucideIcons.link,
+        label: 'Paste URI',
         onTap: () => showAddOtpSheet(context, ref, repo, startMode: AddOtpMode.uri),
       ),
       FabMenuAction(
-        icon: Icons.edit_outlined,
-        color: cs.tertiary,
+        icon: LucideIcons.pencil,
+        label: 'Manual entry',
         onTap: () => showAddOtpSheet(context, ref, repo),
       ),
     ]);
@@ -109,7 +107,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _otpNotifier?.stopAutoRefresh();
     _searchController.dispose();
     _fabController.dispose();
-    _breathController.dispose();
     super.dispose();
   }
 
@@ -127,7 +124,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final items = ref.watch(otpListProvider);
-    final cs = Theme.of(context).colorScheme;
     final settings = ref.watch(settingsProvider);
     final authFlow = ref.watch(authProvider);
     final query = _searchQuery.toLowerCase();
@@ -146,7 +142,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _shownConnectionError = false;
     }
 
-    return Scaffold(
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final shadTheme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
+
+    final scaffold = Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -161,18 +165,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? HomeEmptyState(searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null)
-                    : RefreshIndicator(
-                        onRefresh: () async { await HapticFeedback.mediumImpact(); await Future<void>.delayed(const Duration(milliseconds: 500)); },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) => OtpCard(
-                            key: ValueKey(filtered[index].account.id),
-                            item: filtered[index],
-                            onEdit: () => _showOtpActions(context, ref, filtered[index]),
-                          ),
-                        ),
+                    ? HomeEmptyState(
+                        searchQuery:
+                            _searchQuery.isNotEmpty ? _searchQuery : null,
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isWide = constraints.maxWidth >= 600;
+                          final list = isWide
+                              ? GridView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 8,
+                                    crossAxisSpacing: 8,
+                                    mainAxisExtent: 110,
+                                  ),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) => OtpCard(
+                                    key: ValueKey(filtered[index].account.id),
+                                    item: filtered[index],
+                                    compact: true,
+                                    onEdit: () => _showOtpActions(
+                                      context,
+                                      ref,
+                                      filtered[index],
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) => OtpCard(
+                                    key: ValueKey(filtered[index].account.id),
+                                    item: filtered[index],
+                                    onEdit: () => _showOtpActions(
+                                      context,
+                                      ref,
+                                      filtered[index],
+                                    ),
+                                  ),
+                                );
+
+                          return RefreshIndicator(
+                            onRefresh: () async {
+                              await HapticFeedback.mediumImpact();
+                              await Future<void>.delayed(
+                                const Duration(milliseconds: 500),
+                              );
+                            },
+                            child: list,
+                          );
+                        },
                       ),
               ),
             ]),
@@ -181,37 +232,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       floatingActionButton: ScaleTransition(
         scale: _fabAnimation,
-        child: AnimatedBuilder(
-          animation: _breathAnimation,
-          builder: (context, child) {
-            return Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.diagonal3Values(
-                1.0 / math.sqrt(_breathAnimation.value),
-                _breathAnimation.value,
-                1.0,
-              ),
-              child: child,
-            );
-          },
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _showFabMenu(context, ref);
-            },
-            child: Container(
-              width: 56, height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [cs.primary, cs.primary.withAlpha(200)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [BoxShadow(color: cs.primary.withAlpha(60), blurRadius: 12, offset: const Offset(0, 4))],
-              ),
-              child: Icon(Icons.add, color: cs.onPrimary),
-            ),
+        child: ShadButton(
+          width: 56,
+          height: 56,
+          padding: EdgeInsets.zero,
+          decoration: const ShadDecoration(
+            shape: BoxShape.circle,
           ),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _showFabMenu(context, ref);
+          },
+          child: const Icon(LucideIcons.plus, size: 24),
         ),
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: scaffold,
+      );
+    }
+    return scaffold;
   }
 
   Widget _buildHeader() {
@@ -261,52 +304,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final nav = ref.read(navigationProvider.notifier);
     final repo = ref.read(otpRepositoryProvider);
     final cs = Theme.of(context).colorScheme;
+    final formattedCode = item.code.code.length == 6
+        ? '${item.code.code.substring(0, 3)} ${item.code.code.substring(3)}'
+        : item.code.code;
+
+    final shadTheme = ShadTheme.maybeOf(context);
+    final fgColor = shadTheme?.colorScheme.foreground ?? cs.onSurface;
 
     showSlideBottomSheet<void>(
       context,
-      builder: (_) => StandardBottomSheet(
+      builder: (sheetContext) => StandardBottomSheet(
         title: item.account.issuer,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(color: cs.primaryContainer.withAlpha(80), borderRadius: BorderRadius.circular(16)),
-            child: Center(child: Text(item.code.code, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: 3, fontFamily: 'monospace', color: cs.onPrimaryContainer))),
+        child: Column(children: [
+          ShadCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Center(
+              child: Text(
+                formattedCode,
+                style: AppTheme.codeStyle(
+                  color: fgColor,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          _actionTile(cs, Icons.copy_rounded, 'Copy code', cs.primaryContainer, cs.onPrimaryContainer, () {
-            Navigator.of(context).pop();
-            Clipboard.setData(ClipboardData(text: item.code.code));
-            HapticFeedback.lightImpact();
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Copied to clipboard'), duration: const Duration(seconds: 2), action: SnackBarAction(label: 'OK', onPressed: () {})));
-          }),
-          _actionTile(cs, Icons.edit_outlined, 'Edit account', cs.secondaryContainer, cs.onSecondaryContainer, () {
-            Navigator.of(context).pop();
-            nav.goToEditOtp(item.account.id);
-          }),
-          _actionTile(cs, Icons.delete_outline_rounded, 'Delete account', cs.errorContainer, cs.onErrorContainer, () async {
-            Navigator.of(context).pop();
-            if (await showConfirmDeleteDialog(context, issuer: item.account.issuer, accountLabel: null)) {
-              await repo?.delete(item.account.id);
-              await HapticFeedback.mediumImpact();
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.account.issuer} deleted'), duration: const Duration(seconds: 2)));
-            }
-          }, titleColor: cs.error),
+          const SizedBox(height: 12),
+          _actionTile(
+            icon: LucideIcons.copy,
+            title: 'Copy code',
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              Clipboard.setData(ClipboardData(text: item.code.code));
+              HapticFeedback.lightImpact();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          _actionTile(
+            icon: LucideIcons.pencil,
+            title: 'Edit account',
+            onTap: () {
+              Navigator.of(sheetContext).pop();
+              nav.goToEditOtp(item.account.id);
+            },
+          ),
+          _actionTile(
+            icon: LucideIcons.trash2,
+            title: 'Delete account',
+            isDestructive: true,
+            onTap: () async {
+              Navigator.of(sheetContext).pop();
+              if (await showConfirmDeleteDialog(context, issuer: item.account.issuer, accountLabel: null)) {
+                await repo?.delete(item.account.id);
+                await HapticFeedback.mediumImpact();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item.account.issuer} deleted'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
         ]),
       ),
     );
   }
 
-  Widget _actionTile(ColorScheme cs, IconData icon, String title, Color bgColor, Color iconColor, VoidCallback onTap, {Color? titleColor}) {
-    return ListTile(
-      leading: Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, size: 18, color: iconColor),
-      ),
-      title: Text(title, style: titleColor != null ? TextStyle(color: titleColor) : null),
-      onTap: onTap,
-    );
+  Widget _actionTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    return Builder(builder: (context) {
+      final existingTheme = ShadTheme.maybeOf(context);
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final seed = Theme.of(context).colorScheme.primary;
+      final shadTheme = existingTheme ??
+          (isDark
+              ? AppTheme.shadThemeDark(seedColor: seed)
+              : AppTheme.shadThemeLight(seedColor: seed));
+      final muted = shadTheme.colorScheme.mutedForeground;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: isDestructive
+            ? ShadButton.destructive(
+                width: double.infinity,
+                height: 48,
+                mainAxisAlignment: MainAxisAlignment.start,
+                onPressed: onTap,
+                leading: Icon(icon, size: 18),
+                child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              )
+            : ShadButton.outline(
+                width: double.infinity,
+                height: 48,
+                mainAxisAlignment: MainAxisAlignment.start,
+                onPressed: onTap,
+                leading: Icon(
+                  icon,
+                  size: 18,
+                  color: muted,
+                ),
+                trailing: Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: muted,
+                ),
+                child: Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: shadTheme.colorScheme.foreground,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+      );
+    });
   }
 }

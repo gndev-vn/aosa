@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 
 class PinDots extends StatelessWidget {
   final int filledCount;
@@ -15,7 +18,14 @@ class PinDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final shadTheme = ShadTheme.maybeOf(context);
+    final isDark = shadTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final primary = shadTheme?.colorScheme.primary ??
+        Theme.of(context).colorScheme.primary;
+    final borderColor = shadTheme?.colorScheme.border ??
+        (isDark ? AppTheme.darkBorder : AppTheme.lightBorder);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(6, (i) {
@@ -28,10 +38,10 @@ class PinDots extends StatelessWidget {
           height: 14,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: filled ? colorScheme.primary : Colors.transparent,
+            color: filled ? primary : Colors.transparent,
             border: Border.all(
-              color: filled ? colorScheme.primary : colorScheme.outlineVariant,
-              width: filled ? 0 : 2,
+              color: filled ? primary : borderColor,
+              width: 2,
             ),
           ),
         );
@@ -63,9 +73,8 @@ class Numpad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final shadTheme = ShadTheme.maybeOf(context);
     final spacing = keySize * 0.08;
-    final radius = keySize * 0.5;
     final fontSize = keySize * 0.33;
     const keys = [
       ['1', '2', '3'],
@@ -87,34 +96,24 @@ class Numpad extends StatelessWidget {
                 child: SizedBox(
                   width: keySize,
                   height: keySize,
-                  child: Material(
-                    color: disabled
-                        ? Colors.transparent
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(radius),
-                    elevation: disabled ? 0 : 1,
-                    shadowColor: colorScheme.shadow.withAlpha(20),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(radius),
-                      onTap: disabled
-                          ? null
-                          : () {
-                              HapticFeedback.selectionClick();
-                              onKeyPressed(key);
-                            },
-                      child: Center(
-                        child: Text(
-                          key,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w500,
-                            color: disabled
-                                ? colorScheme.onSurfaceVariant.withAlpha(80)
-                                : key == '\u232B'
-                                    ? colorScheme.onSurfaceVariant
-                                    : colorScheme.onSurface,
-                          ),
-                        ),
+                  child: ShadButton.outline(
+                    width: keySize,
+                    height: keySize,
+                    padding: EdgeInsets.zero,
+                    decoration: const ShadDecoration(shape: BoxShape.circle),
+                    enabled: !disabled,
+                    onPressed: disabled
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            onKeyPressed(key);
+                          },
+                    child: Text(
+                      key,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w600,
+                        color: shadTheme?.colorScheme.foreground,
                       ),
                     ),
                   ),
@@ -135,20 +134,9 @@ class ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        message,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colorScheme.onErrorContainer,
-              fontWeight: FontWeight.w500,
-            ),
-      ),
+    return ShadAlert.destructive(
+      icon: const Icon(LucideIcons.circleAlert),
+      description: Text(message),
     );
   }
 }

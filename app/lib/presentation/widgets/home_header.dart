@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../providers/sync_provider.dart';
-import 'aosa_widgets.dart';
+
 
 class HomeHeader extends StatelessWidget {
   final bool syncEnabled;
@@ -26,82 +27,113 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    final titleStyle = textTheme.headlineLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
-          color: cs.onSurface,
-        ) ??
-        AppTheme.titleStyle(color: cs.onSurface);
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seedColor = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seedColor)
+            : AppTheme.shadThemeLight(seedColor: seedColor));
+    final isSyncing = syncState == SyncState.syncing;
 
     final title = Text(
       'AOSA',
-      style: titleStyle,
+      style: AppTheme.titleStyle(color: theme.colorScheme.foreground),
     );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (syncEnabled && isAuthenticated)
-            aosaIconButton(
-              icon: syncState == SyncState.syncing
-                  ? Icons.hourglass_top
-                  : Icons.sync_rounded,
-              color: cs.onSurface,
-              onPressed: syncState == SyncState.syncing
-                  ? () {}
-                  : (onSync ?? () {}),
+            ShadButton.outline(
+              width: 36,
+              height: 36,
+              padding: EdgeInsets.zero,
+              onPressed: isSyncing ? () {} : onSync!,
+              child: Icon(
+                LucideIcons.refreshCw,
+                size: 16,
+                color: theme.colorScheme.foreground,
+              ),
             )
           else
-            const SizedBox(width: 40),
+            const SizedBox(width: 36),
           Expanded(
-            child: syncEnabled
-                ? GestureDetector(
-                    onTap: onSelectRepo,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        title,
-                        if (activeRepoName != null)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.folder_outlined,
-                                size: 14,
-                                color: cs.primary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                activeRepoName!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              Icon(
-                                Icons.expand_more,
-                                size: 14,
-                                color: cs.primary,
-                              ),
-                            ],
-                          ),
-                      ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                title,
+                if (syncEnabled && activeRepoName != null) ...[
+                  const SizedBox(height: 4),
+                  ShadButton.outline(
+                    size: ShadButtonSize.sm,
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 2,
                     ),
-                  )
-                : Center(child: title),
+                    onPressed: onSelectRepo,
+                    leading: Icon(
+                      LucideIcons.folder,
+                      size: 13,
+                      color: theme.colorScheme.mutedForeground,
+                    ),
+                    trailing: Icon(
+                      LucideIcons.chevronDown,
+                      size: 13,
+                      color: theme.colorScheme.mutedForeground,
+                    ),
+                    child: Text(
+                      activeRepoName!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.foreground,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          aosaIconButton(
-            icon: Icons.settings,
-            color: cs.onSurface,
+          ShadButton.outline(
+            width: 36,
+            height: 36,
+            padding: EdgeInsets.zero,
             onPressed: onSettings,
+            child: Icon(
+              LucideIcons.settings,
+              size: 16,
+              color: theme.colorScheme.foreground,
+            ),
           ),
         ],
       ),
     );
+
+    final header = Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.background,
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.border,
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: content,
+    );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: header,
+      );
+    }
+    return header;
+
   }
 }

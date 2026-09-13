@@ -2,11 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../providers/app_init_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/aosa_widgets.dart';
+import '../../widgets/aosa_input.dart';
 import '../../widgets/standard_bottom_sheet.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 class CloudConfigSheet extends ConsumerStatefulWidget {
   const CloudConfigSheet({super.key});
@@ -59,10 +61,17 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = existingTheme?.brightness == Brightness.dark ||
+        Theme.of(context).brightness == Brightness.dark;
+    final seed = Theme.of(context).colorScheme.primary;
+    final theme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seed)
+            : AppTheme.shadThemeLight(seedColor: seed));
     final isConnected = ref.watch(authProvider) == AuthFlow.authenticated;
 
-    return StandardBottomSheet(
+    final sheet = StandardBottomSheet(
       title: 'Server',
       isScrollControlled: true,
       confirmLabel: isConnected ? 'Reconnect' : 'Connect',
@@ -72,39 +81,18 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_generalError != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, size: 18, color: cs.onErrorContainer),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _generalError!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            ShadAlert.destructive(
+              icon: const Icon(LucideIcons.circleAlert),
+              description: Text(_generalError!),
             ),
             const SizedBox(height: 16),
           ],
-          TextField(
+          AosaInput(
             controller: _serverController,
-            decoration: InputDecoration(
-              labelText: 'Server URL',
-              hintText: 'https://aosa.example.com',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.dns_outlined),
-              errorText: _urlError,
-            ),
+            label: 'Server URL',
+            hint: 'https://aosa.example.com',
+            leadingIcon: LucideIcons.server,
+            errorText: _urlError,
             textInputAction: TextInputAction.next,
             keyboardType: TextInputType.url,
             enabled: !_isLoading,
@@ -113,83 +101,95 @@ class _CloudConfigSheetState extends ConsumerState<CloudConfigSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text('Use token', style: TextStyle(color: cs.onSurface)),
+              Text(
+                'Use token authentication',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.foreground,
+                ),
+              ),
               const Spacer(),
               IgnorePointer(
                 ignoring: _isLoading,
-                child: AosaSwitch(
+                child: ShadSwitch(
                   value: _useToken,
                   onChanged: (v) => setState(() => _useToken = v),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (_useToken)
-            TextField(
+            AosaInput(
               controller: _tokenController,
-              decoration: InputDecoration(
-                labelText: 'Token',
-                hintText: 'Paste your token here',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.vpn_key_outlined),
-                errorText: _tokenError,
-              ),
+              label: 'Personal Access Token',
+              hint: 'Paste your personal access token',
+              leadingIcon: LucideIcons.key,
+              errorText: _tokenError,
               textInputAction: TextInputAction.done,
               enabled: !_isLoading,
               onChanged: (_) => setState(() => _tokenError = null),
             )
           else ...[
-            TextField(
+            AosaInput(
               controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: 'Username',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.person_outline),
-                errorText: _usernameError,
-              ),
+              label: 'Username',
+              hint: 'Enter your username',
+              leadingIcon: LucideIcons.user,
+              errorText: _usernameError,
               textInputAction: TextInputAction.next,
               enabled: !_isLoading,
               onChanged: (_) => setState(() => _usernameError = null),
             ),
-            const SizedBox(height: 12),
-            TextField(
+            const SizedBox(height: 14),
+            AosaInput(
               controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.lock_outline),
-                errorText: _passwordError,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                  ),
-                  onPressed: () {
-                    setState(() => _obscurePassword = !_obscurePassword);
-                  },
-                ),
-              ),
+              label: 'Password',
+              hint: 'Enter your password',
+              leadingIcon: LucideIcons.lock,
+              errorText: _passwordError,
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
               enabled: !_isLoading,
               onChanged: (_) => setState(() => _passwordError = null),
+              trailing: GestureDetector(
+                onTap: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  child: Icon(
+                    _obscurePassword
+                        ? LucideIcons.eyeOff
+                        : LucideIcons.eye,
+                    size: 16,
+                    color: theme.colorScheme.mutedForeground,
+                  ),
+                ),
+              ),
             ),
           ],
           if (isConnected) ...[
-            const SizedBox(height: 20),
-            SizedBox(
+            const SizedBox(height: 24),
+            ShadButton.destructive(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _isLoading ? null : _onDisconnect,
-                child: Text('Disconnect', style: TextStyle(color: cs.error)),
-              ),
+              height: 44,
+              onPressed: _isLoading ? null : _onDisconnect,
+              child: const Text('Disconnect from server'),
             ),
           ],
         ],
       ),
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: theme,
+        child: sheet,
+      );
+    }
+    return sheet;
   }
 
   Uri? _validateUrl(String url) {

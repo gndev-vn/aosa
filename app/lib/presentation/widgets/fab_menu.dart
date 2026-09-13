@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../../core/theme/app_theme.dart';
 
 class FabMenuAction {
   final IconData icon;
-  final Color color;
+  final String? label;
+  final Color? color;
+  final Color? iconColor;
+  final bool isPrimary;
   final VoidCallback onTap;
 
   const FabMenuAction({
     required this.icon,
-    required this.color,
+    this.label,
+    this.color,
+    this.iconColor,
+    this.isPrimary = false,
     required this.onTap,
   });
 }
@@ -61,7 +70,7 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     _fadeIn = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
 
     _itemAnims = List.generate(widget.actions.length, (i) {
-      final start = i * 0.12;
+      final start = i * 0.08;
       final end = (start + 0.5).clamp(0.0, 1.0);
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
@@ -106,10 +115,16 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final padding = MediaQuery.of(context).padding;
-    final cs = Theme.of(context).colorScheme;
+    final existingTheme = ShadTheme.maybeOf(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final seedColor = Theme.of(context).colorScheme.primary;
+    final shadTheme = existingTheme ??
+        (isDark
+            ? AppTheme.shadThemeDark(seedColor: seedColor)
+            : AppTheme.shadThemeLight(seedColor: seedColor));
     final total = widget.actions.length;
 
-    return AnimatedBuilder(
+    final content = AnimatedBuilder(
       animation: _ctrl,
       builder: (context, _) {
         return Material(
@@ -125,26 +140,22 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
 
               // Action buttons
               for (int i = 0; i < total; i++)
-                _buildItem(widget.actions[i], i, total, size, padding, cs),
+                _buildItem(widget.actions[i], i, total, size, padding, shadTheme),
 
               // FAB
               Positioned(
                 right: _fabMargin,
                 bottom: padding.bottom + _fabMargin,
-                child: GestureDetector(
-                  onTap: _close,
-                  child: Container(
-                    width: _fabSize,
-                    height: _fabSize,
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: AnimatedRotation(
-                      turns: _fadeIn.value * 0.125, // 45 degrees
-                      duration: Duration.zero,
-                      child: Icon(Icons.add, color: cs.onPrimary, size: 28),
-                    ),
+                child: ShadButton(
+                  width: _fabSize,
+                  height: _fabSize,
+                  padding: EdgeInsets.zero,
+                  decoration: const ShadDecoration(shape: BoxShape.circle),
+                  onPressed: _close,
+                  child: AnimatedRotation(
+                    turns: _fadeIn.value * 0.125, // 45 degrees
+                    duration: Duration.zero,
+                    child: const Icon(LucideIcons.plus, size: 24),
                   ),
                 ),
               ),
@@ -153,6 +164,14 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
         );
       },
     );
+
+    if (existingTheme == null) {
+      return ShadTheme(
+        data: shadTheme,
+        child: content,
+      );
+    }
+    return content;
   }
 
   Widget _buildItem(
@@ -161,7 +180,7 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     int total,
     Size screen,
     EdgeInsets padding,
-    ColorScheme cs,
+    ShadThemeData shadTheme,
   ) {
     final d = _itemAnims[index].value;
     if (d <= 0) return const SizedBox.shrink();
@@ -170,25 +189,70 @@ class _FabMenuOverlayState extends State<_FabMenuOverlay>
     final fab = _fabCenter(screen, padding);
     final pos = Offset.lerp(fab, target, d)!;
 
-    return Positioned(
-      left: pos.dx - _itemSize / 2,
-      top: pos.dy - _itemSize / 2,
-      child: GestureDetector(
-        onTap: () {
+    final Widget actionButton;
+    if (action.isPrimary || action.color != null) {
+      actionButton = ShadButton(
+        width: _itemSize,
+        height: _itemSize,
+        padding: EdgeInsets.zero,
+        backgroundColor: action.color ?? shadTheme.colorScheme.primary,
+        foregroundColor: action.iconColor ?? shadTheme.colorScheme.primaryForeground,
+        decoration: const ShadDecoration(shape: BoxShape.circle),
+        onPressed: () {
           HapticFeedback.lightImpact();
           _close();
           Future.delayed(const Duration(milliseconds: 200), action.onTap);
         },
+        child: Icon(action.icon, size: 18),
+      );
+    } else {
+      actionButton = ShadButton.outline(
+        width: _itemSize,
+        height: _itemSize,
+        padding: EdgeInsets.zero,
+        decoration: const ShadDecoration(shape: BoxShape.circle),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _close();
+          Future.delayed(const Duration(milliseconds: 200), action.onTap);
+        },
+        child: Icon(
+          action.icon,
+          size: 18,
+          color: action.iconColor ?? shadTheme.colorScheme.foreground,
+        ),
+      );
+    }
+
+    return Positioned(
+      right: _fabMargin + (_fabSize - _itemSize) / 2,
+      top: pos.dy - _itemSize / 2,
+      child: FadeTransition(
+        opacity: _itemAnims[index],
         child: ScaleTransition(
           scale: _itemAnims[index],
-          child: Container(
-            width: _itemSize,
-            height: _itemSize,
-            decoration: BoxDecoration(
-              color: action.color,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(action.icon, size: 20, color: Colors.white),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (action.label != null) ...[
+                ShadCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    action.label!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: shadTheme.colorScheme.foreground,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              actionButton,
+            ],
           ),
         ),
       ),
